@@ -29,6 +29,11 @@
           <div style="font-size:.75rem;color:var(--text-muted);">
             {{ conn.get_integration_type_display }} · {{ conn.get_provider_display }} · {{ conn.get_status_display }}
           </div>
+          {% if conn.config.pull_last_run_at %}
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.2rem;">
+              Pull: {{ conn.config.pull_last_conflicts|default:0 }} conflict(s), {{ conn.config.pull_last_inspected|default:0 }} events inspected
+            </div>
+          {% endif %}
           {% if conn.last_error %}
             <div style="font-size:.75rem;color:var(--red-600);margin-top:.2rem;">
               {{ conn.last_error|truncatechars:180 }}

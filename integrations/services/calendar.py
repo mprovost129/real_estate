@@ -27,6 +27,16 @@ class CalendarEventPayload:
     all_day: bool = False
 
 
+@dataclass
+class RemoteCalendarEvent:
+    remote_event_id: str
+    remote_calendar_id: str
+    etag: str = ""
+    updated_at: datetime | None = None
+    title: str = ""
+    is_cancelled: bool = False
+
+
 class BaseCalendarProvider:
     """Shared interface for calendar providers."""
 
@@ -45,6 +55,14 @@ class BaseCalendarProvider:
         raise NotImplementedError
 
     def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
+        raise NotImplementedError
+
+    def list_events(
+        self,
+        remote_calendar_id: str,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> Iterable[RemoteCalendarEvent]:
         raise NotImplementedError
 
 
@@ -67,6 +85,14 @@ class ConsoleCalendarProvider(BaseCalendarProvider):
 
     def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
         return None
+
+    def list_events(
+        self,
+        remote_calendar_id: str,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> Iterable[RemoteCalendarEvent]:
+        return []
 
 
 class GoogleCalendarProvider(BaseCalendarProvider):
@@ -160,6 +186,44 @@ class GoogleCalendarProvider(BaseCalendarProvider):
         calendar_id = quote(remote_calendar_id, safe="")
         event_id = quote(remote_event_id, safe="")
         self._request("DELETE", f"/calendars/{calendar_id}/events/{event_id}")
+
+    def list_events(
+        self,
+        remote_calendar_id: str,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> Iterable[RemoteCalendarEvent]:
+        calendar_id = quote(remote_calendar_id, safe="")
+        data = self._request(
+            "GET",
+            f"/calendars/{calendar_id}/events",
+            params={
+                "timeMin": window_start.astimezone(dt_timezone.utc).isoformat(),
+                "timeMax": window_end.astimezone(dt_timezone.utc).isoformat(),
+                "singleEvents": "true",
+                "showDeleted": "true",
+            },
+        )
+        rows = []
+        for item in data.get("items", []):
+            event_id = item.get("id", "")
+            if not event_id:
+                continue
+            updated_raw = item.get("updated", "")
+            updated_at = None
+            if updated_raw:
+                updated_at = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
+            rows.append(
+                RemoteCalendarEvent(
+                    remote_event_id=event_id,
+                    remote_calendar_id=remote_calendar_id,
+                    etag=item.get("etag", ""),
+                    updated_at=updated_at,
+                    title=item.get("summary", ""),
+                    is_cancelled=item.get("status") == "cancelled",
+                )
+            )
+        return rows
 
 
 class OutlookCalendarProvider(BaseCalendarProvider):
@@ -266,6 +330,43 @@ class OutlookCalendarProvider(BaseCalendarProvider):
         calendar_id = quote(remote_calendar_id, safe="")
         event_id = quote(remote_event_id, safe="")
         self._request("DELETE", f"/me/calendars/{calendar_id}/events/{event_id}")
+
+    def list_events(
+        self,
+        remote_calendar_id: str,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> Iterable[RemoteCalendarEvent]:
+        calendar_id = quote(remote_calendar_id, safe="")
+        data = self._request(
+            "GET",
+            f"/me/calendars/{calendar_id}/calendarView",
+            params={
+                "startDateTime": window_start.astimezone(dt_timezone.utc).isoformat(),
+                "endDateTime": window_end.astimezone(dt_timezone.utc).isoformat(),
+                "$select": "id,subject,lastModifiedDateTime,isCancelled,@odata.etag",
+            },
+        )
+        rows = []
+        for item in data.get("value", []):
+            event_id = item.get("id", "")
+            if not event_id:
+                continue
+            updated_raw = item.get("lastModifiedDateTime", "")
+            updated_at = None
+            if updated_raw:
+                updated_at = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
+            rows.append(
+                RemoteCalendarEvent(
+                    remote_event_id=event_id,
+                    remote_calendar_id=remote_calendar_id,
+                    etag=item.get("@odata.etag", ""),
+                    updated_at=updated_at,
+                    title=item.get("subject", ""),
+                    is_cancelled=bool(item.get("isCancelled")),
+                )
+            )
+        return rows
 
 
 CALENDAR_PROVIDER_MAP = {

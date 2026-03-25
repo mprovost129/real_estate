@@ -1,6 +1,6 @@
 # Real Estate CRM Outline and Build Status
 
-Last updated: 2026-03-24
+Last updated: 2026-03-25
 
 ## Purpose
 This document tracks what is implemented in the app today and what remains.
@@ -109,6 +109,7 @@ This document tracks what is implemented in the app today and what remains.
 - [ ] Zillow API integration (requested, pending)
 - [x] Google Calendar outbound sync baseline (OAuth, token refresh, push events)
 - [x] Outlook Calendar outbound sync baseline (OAuth, token refresh, push events)
+- [x] Calendar pull sync baseline with mapped-event conflict detection
 - [ ] Voice/call provider integration
 - [ ] E-sign/document storage integration
 
@@ -143,16 +144,16 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added OAuth connection scaffolding for Google/Outlook calendar providers (start/callback flow with code capture).
 - [x] Added Google OAuth token exchange/refresh plumbing and live Google Calendar adapter calls for list/upsert/delete.
 - [x] Added Outlook OAuth token exchange/refresh plumbing and Microsoft Graph Calendar adapter calls for list/upsert/delete.
+- [x] Added calendar pull sync baseline (`manage.py pull_calendar_updates`) with mapped-event conflict detection.
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations
-- OAuth/account-link flows for calendar providers (Google/Outlook)
-- Background sync jobs (push tasks/open houses/closings + pull updates)
+- Bi-directional calendar hardening (remote -> local mutation rules, conflict resolution UX)
+- Background sync hardening (retries, monitoring, idempotency checks)
 - MLS/IDX and Zillow provider implementations using live credentials
 
 2. External integrations
 - MLS/IDX integration
 - Zillow API integration
-- Calendar provider sync (Google/Outlook)
 - Voice/call provider integration
 - E-sign/document storage integration
