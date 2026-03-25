@@ -160,3 +160,35 @@ class ListingSyncState(OrgScopedModel):
 
     def __str__(self):
         return f"{self.connection.provider}:{self.remote_listing_id}"
+
+
+class IntegrationSyncRun(OrgScopedModel):
+    class RunType(models.TextChoices):
+        CALENDAR_PUSH = "calendar_push", "Calendar Push"
+        CALENDAR_PULL = "calendar_pull", "Calendar Pull"
+        LISTING_SYNC = "listing_sync", "Listing Sync"
+
+    class RunStatus(models.TextChoices):
+        SUCCESS = "success", "Success"
+        PARTIAL = "partial", "Partial"
+        FAILED = "failed", "Failed"
+
+    run_type = models.CharField(max_length=30, choices=RunType.choices)
+    status = models.CharField(max_length=20, choices=RunStatus.choices, default=RunStatus.SUCCESS)
+    command = models.CharField(max_length=80, blank=True)
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField(null=True, blank=True)
+    total_items = models.PositiveIntegerField(default=0)
+    success_items = models.PositiveIntegerField(default=0)
+    failed_items = models.PositiveIntegerField(default=0)
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["organization", "run_type", "started_at"]),
+            models.Index(fields=["organization", "status", "started_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_run_type_display()} {self.started_at:%Y-%m-%d %H:%M} ({self.status})"

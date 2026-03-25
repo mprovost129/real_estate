@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 
-from integrations.models import IntegrationConnection
+from integrations.models import IntegrationConnection, IntegrationSyncRun
 from integrations.services.calendar_sync import sync_calendar_connection
+from integrations.services.sync_runs import finish_sync_run, start_sync_run
 
 
 class Command(BaseCommand):
@@ -14,6 +15,9 @@ class Command(BaseCommand):
         parser.add_argument("--days-ahead", type=int, default=45)
         parser.add_argument("--dry-run", action="store_true")
         parser.add_argument("--include-connecting", action="store_true")
+        parser.add_argument("--retries", type=int, default=1)
+        parser.add_argument("--max-failures", type=int, default=0)
+        parser.add_argument("--fail-on-error", action="store_true")
 
     def handle(self, *args, **options):
         qs = IntegrationConnection.objects.filter(
@@ -40,29 +44,77 @@ class Command(BaseCommand):
             self.stdout.write("No active calendar integration connections found.")
             return
 
+        failures = 0
+        successes = 0
+        attempts_used = 0
+        run = None
+        first = qs.first()
+        if first:
+            run = start_sync_run(
+                first.organization,
+                IntegrationSyncRun.RunType.CALENDAR_PUSH,
+                "sync_calendar_events",
+                details={
+                    "org_id": options["org_id"],
+                    "connection_id": options["connection_id"],
+                    "days_back": options["days_back"],
+                    "days_ahead": options["days_ahead"],
+                    "dry_run": options["dry_run"],
+                    "include_connecting": options["include_connecting"],
+                    "retries": options["retries"],
+                },
+            )
+
         for connection in qs:
             self.stdout.write(
                 f"Syncing connection={connection.pk} org={connection.organization_id} provider={connection.provider}"
             )
-            try:
-                result = sync_calendar_connection(
-                    connection=connection,
-                    days_back=options["days_back"],
-                    days_ahead=options["days_ahead"],
-                    dry_run=options["dry_run"],
-                )
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"result created={result.get('created', 0)} "
-                        f"updated={result.get('updated', 0)} failed={result.get('failed', 0)} "
-                        f"window={result.get('window_start')}..{result.get('window_end')}"
+            final_exc = None
+            for attempt in range(1, max(1, options["retries"]) + 1):
+                attempts_used += 1
+                try:
+                    result = sync_calendar_connection(
+                        connection=connection,
+                        days_back=options["days_back"],
+                        days_ahead=options["days_ahead"],
+                        dry_run=options["dry_run"],
                     )
-                )
-            except NotImplementedError as exc:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f"skipped provider implementation pending: {exc}"
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"result created={result.get('created', 0)} "
+                            f"updated={result.get('updated', 0)} failed={result.get('failed', 0)} "
+                            f"window={result.get('window_start')}..{result.get('window_end')}"
+                        )
                     )
-                )
-            except Exception as exc:
-                self.stdout.write(self.style.ERROR(f"sync failed: {exc}"))
+                    successes += 1
+                    final_exc = None
+                    break
+                except NotImplementedError as exc:
+                    self.stdout.write(self.style.WARNING(f"skipped provider implementation pending: {exc}"))
+                    successes += 1
+                    final_exc = None
+                    break
+                except Exception as exc:
+                    final_exc = exc
+                    if attempt < max(1, options["retries"]):
+                        self.stdout.write(self.style.WARNING(f"attempt {attempt} failed, retrying: {exc}"))
+                    else:
+                        self.stdout.write(self.style.ERROR(f"sync failed: {exc}"))
+            if final_exc is not None:
+                failures += 1
+                if options["max_failures"] and failures >= options["max_failures"]:
+                    self.stdout.write(self.style.ERROR("Max failures reached, aborting run."))
+                    break
+
+        total = successes + failures
+        if run:
+            finish_sync_run(
+                run,
+                total_items=total,
+                success_items=successes,
+                failed_items=failures,
+                details={**(run.details or {}), "attempts_used": attempts_used},
+            )
+
+        if failures and options["fail_on_error"]:
+            raise SystemExit(1)

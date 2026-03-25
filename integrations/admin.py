@@ -4,6 +4,7 @@ from .models import (
     CalendarSyncState,
     ExternalCalendarEventMap,
     IntegrationConnection,
+    IntegrationSyncRun,
     ListingSyncState,
 )
 
@@ -61,3 +62,19 @@ class ListingSyncStateAdmin(admin.ModelAdmin):
     ]
     list_filter = ["status", "organization", "connection__provider"]
     search_fields = ["remote_listing_id", "source_mls_number"]
+
+
+@admin.register(IntegrationSyncRun)
+class IntegrationSyncRunAdmin(admin.ModelAdmin):
+    list_display = [
+        "run_type",
+        "status",
+        "organization",
+        "started_at",
+        "finished_at",
+        "total_items",
+        "failed_items",
+    ]
+    list_filter = ["run_type", "status", "organization"]
+    search_fields = ["command"]
+    readonly_fields = ["started_at", "finished_at", "details", "total_items", "success_items", "failed_items"]
