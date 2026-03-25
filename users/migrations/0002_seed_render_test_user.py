@@ -49,8 +49,8 @@ def seed_render_test_user(apps, schema_editor):
         name=TEST_ORG_NAME,
         defaults={
             "owner": user,
-            "org_type": Organization.OrgType.INDIVIDUAL,
-            "plan": Organization.Plan.FREE,
+            "org_type": "individual",
+            "plan": "free",
             "is_active": True,
         },
     )
@@ -63,7 +63,7 @@ def seed_render_test_user(apps, schema_editor):
         user=user,
         organization=org,
         defaults={
-            "role": Membership.Role.OWNER,
+            "role": "owner",
             "is_active": True,
         },
     )
