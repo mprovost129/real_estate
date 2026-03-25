@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from integrations.models import IntegrationConnection, IntegrationSyncRun
+from integrations.services.alerts import emit_sync_run_alerts
 from integrations.services.calendar_sync import sync_calendar_connection
 from integrations.services.sync_runs import finish_sync_run, start_sync_run
 
@@ -108,13 +109,18 @@ class Command(BaseCommand):
 
         total = successes + failures
         if run:
-            finish_sync_run(
+            finished = finish_sync_run(
                 run,
                 total_items=total,
                 success_items=successes,
                 failed_items=failures,
                 details={**(run.details or {}), "attempts_used": attempts_used},
             )
+            alert_count = emit_sync_run_alerts(finished)
+            if alert_count:
+                self.stdout.write(
+                    self.style.WARNING(f"Created {alert_count} integration alert notification(s).")
+                )
 
         if failures and options["fail_on_error"]:
             raise SystemExit(1)

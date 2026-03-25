@@ -147,6 +147,7 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added calendar pull sync baseline (`manage.py pull_calendar_updates`) with mapped-event conflict detection.
 - [x] Added listing sync execution baseline (`manage.py sync_listing_data`) with provider fetch, listing state updates, optional property field merge, and optional photo import.
 - [x] Added integration sync run observability + controls (`IntegrationSyncRun` log model, retries, max-failure threshold, and fail-on-error support across sync commands).
+- [x] Added integration sync alert routing to in-app notifications for owner/admin users on failed/high-error runs.
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations

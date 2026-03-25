@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from integrations.models import IntegrationConnection, IntegrationSyncRun
+from integrations.services.alerts import emit_sync_run_alerts
 from integrations.services.listing_sync import sync_listing_for_property
 from integrations.services.sync_runs import finish_sync_run, start_sync_run
 from properties.models import Property
@@ -123,13 +124,18 @@ class Command(BaseCommand):
                         break
 
             total = successes + failures
-            finish_sync_run(
+            finished = finish_sync_run(
                 run,
                 total_items=total,
                 success_items=successes,
                 failed_items=failures,
                 details={**(run.details or {}), "attempts_used": attempts_used},
             )
+            alert_count = emit_sync_run_alerts(finished)
+            if alert_count:
+                self.stdout.write(
+                    self.style.WARNING(f"Created {alert_count} integration alert notification(s).")
+                )
 
             if options["max_failures"] and global_failures >= options["max_failures"]:
                 break

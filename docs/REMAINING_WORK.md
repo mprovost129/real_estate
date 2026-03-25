@@ -6,7 +6,7 @@ Source: `docs/OUTLINE.md`
 Integration groundwork baseline is complete (`integrations` app, provider connection records, adapter interfaces, settings scaffold).
 Initial sync orchestration is in place (`manage.py sync_calendar_events`) with event mapping storage.
 Listing sync orchestration is in place (`manage.py sync_listing_data`) with listing-state tracking and optional property/photo updates.
-Sync observability baseline is in place (`IntegrationSyncRun`, retries, max-failure controls, fail-on-error switches).
+Sync observability baseline is in place (`IntegrationSyncRun`, retries, max-failure controls, fail-on-error switches, in-app alerts for failed/high-error runs).
 
 ## Not Yet Completed
 
@@ -19,7 +19,7 @@ Sync observability baseline is in place (`IntegrationSyncRun`, retries, max-fail
 
 ## Recommended Next Build Order
 1. Calendar and listing provider implementations
-- Background sync hardening (advanced retry policy/backoff, alert routing, and remote->local mutation rules)
+- Background sync hardening (advanced retry policy/backoff and remote->local mutation rules)
 - MLS/IDX and Zillow provider hardening using live credentials
 
 2. Provider rollouts
