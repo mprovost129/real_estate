@@ -2,13 +2,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
+from django.templatetags.static import static as static_url
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from organizations import views as org_views
 from users import views as user_views
 
 urlpatterns = [
     path("", lambda request: redirect("dashboard"), name="home"),
+    path("favicon.ico", RedirectView.as_view(url=static_url("images/favicon.svg"), permanent=True)),
     path("admin/", admin.site.urls),
     path("", include("users.urls")),
     path("contacts/", include("contacts.urls")),

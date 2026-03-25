@@ -19,7 +19,7 @@ Sync observability baseline is in place (`IntegrationSyncRun`, retries + exponen
 
 ## Recommended Next Build Order
 1. Calendar and listing provider implementations
-- Background sync hardening (alert routing escalation policies and remote->local mutation rules)
+- Background sync hardening (remote->local mutation rules, reconciliation workflows, and monitoring dashboards)
 - MLS/IDX and Zillow provider hardening using live credentials
 
 2. Provider rollouts

@@ -5,6 +5,7 @@ import from here and override as needed.
 """
 
 from pathlib import Path
+import os
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -186,3 +187,16 @@ GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
 MICROSOFT_CLIENT_ID = env('MICROSOFT_CLIENT_ID', default='')
 MICROSOFT_CLIENT_SECRET = env('MICROSOFT_CLIENT_SECRET', default='')
+
+# ---------------------------------------------------------------------------
+# Test access (Render/dev fallback)
+# ---------------------------------------------------------------------------
+ENABLE_TEST_LOGIN = env.bool(
+    'ENABLE_TEST_LOGIN',
+    default=os.environ.get('RENDER', '').strip().lower() == 'true',
+)
+TEST_LOGIN_EMAIL = env('TEST_LOGIN_EMAIL', default='test@render.local')
+TEST_LOGIN_PASSWORD = env('TEST_LOGIN_PASSWORD', default='RenderTest123!')
+TEST_LOGIN_FIRST_NAME = env('TEST_LOGIN_FIRST_NAME', default='Render')
+TEST_LOGIN_LAST_NAME = env('TEST_LOGIN_LAST_NAME', default='Tester')
+TEST_LOGIN_ORG_NAME = env('TEST_LOGIN_ORG_NAME', default='Render Test Workspace')

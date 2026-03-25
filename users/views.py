@@ -30,7 +30,7 @@ def login_view(request):
         user = form.get_user()
         if not form.cleaned_data.get("remember_me"):
             request.session.set_expiry(0)  # expire on browser close
-        login(request, user)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         next_url = request.GET.get("next") or "dashboard"
         return redirect(next_url)
 

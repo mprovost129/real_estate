@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}{% endblock %} — {{ SITE_NAME|default:"Real Estate CRM" }}</title>
+  <title>{% block title %}{% endblock %} - {{ SITE_NAME|default:"Real Estate CRM" }}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}" />
+  <link rel="shortcut icon" href="{% static 'images/favicon.svg' %}" />
 
   <!-- Theme applied before paint to prevent flash -->
   <script src="{% static 'js/theme.js' %}"></script>
