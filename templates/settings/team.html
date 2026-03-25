@@ -1,0 +1,234 @@
+{% extends "settings/base_settings.html" %}
+
+{% block title %}Team Members{% endblock %}
+
+{% block settings_content %}
+
+<!-- Current members -->
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="bi bi-people me-1" style="color:var(--brand-500);"></i>
+      Team Members
+    </span>
+    <span class="badge badge-gray">{{ members|length }}</span>
+  </div>
+  <div style="overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border-muted);background:var(--bg-subtle);">
+          <th style="padding:.5rem 1rem;font-weight:600;color:var(--text-secondary);text-align:left;">Member</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);">Role</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);">Joined</th>
+          {% if can_manage %}<th style="padding:.5rem .75rem;"></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for mem in members %}
+        <tr style="border-bottom:1px solid var(--border-muted);">
+          <td style="padding:.625rem 1rem;">
+            <div style="display:flex;align-items:center;gap:.625rem;">
+              <div style="width:2rem;height:2rem;border-radius:50%;background:var(--brand-500);
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:.6875rem;font-weight:700;color:#fff;flex-shrink:0;">
+                {{ mem.user.first_name|first|upper }}{{ mem.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div style="font-weight:500;">{{ mem.user.full_name|default:mem.user.email }}</div>
+                <div style="color:var(--text-muted);font-size:.75rem;">{{ mem.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="padding:.625rem .75rem;">
+            {% if can_manage and mem.role != "owner" and mem.user != request.user %}
+              <form method="post" action="{% url 'team_member_role' mem.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <select name="role" class="input" style="height:1.75rem;font-size:.75rem;padding:.125rem .375rem;"
+                        onchange="this.form.submit()">
+                  {% for val, label in role_choices %}
+                    <option value="{{ val }}" {% if mem.role == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            {% else %}
+              {% if mem.role == "owner" %}
+                <span class="badge badge-blue">Owner</span>
+              {% elif mem.role == "admin" %}
+                <span class="badge badge-yellow">Admin</span>
+              {% else %}
+                <span class="badge badge-gray">{{ mem.get_role_display }}</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td style="padding:.625rem .75rem;color:var(--text-muted);">
+            {{ mem.date_joined|date:"M j, Y" }}
+          </td>
+          {% if can_manage %}
+          <td style="padding:.625rem .75rem;text-align:right;">
+            {% if mem.role != "owner" and mem.user != request.user %}
+              <form method="post" action="{% url 'team_member_remove' mem.pk %}"
+                    onsubmit="return confirm('Remove {{ mem.user.full_name|default:mem.user.email }} from the team?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm"
+                        style="color:var(--color-danger);padding:.25rem .4rem;" title="Remove">
+                  <i class="bi bi-person-dash"></i>
+                </button>
+              </form>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Invite form -->
+{% if can_manage %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="bi bi-person-plus me-1" style="color:var(--brand-500);"></i>
+      Invite a team member
+    </span>
+  </div>
+  <div class="card-body" style="padding:1.25rem;">
+    <p style="font-size:.8125rem;color:var(--text-muted);margin-bottom:1rem;">
+      If the email isn't registered yet, a new account will be created. You'll need to share login credentials separately.
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if invite_form.non_field_errors %}
+        <div class="flash flash-danger mb-3">{{ invite_form.non_field_errors }}</div>
+      {% endif %}
+
+      <div style="display:flex;flex-direction:column;gap:.875rem;max-width:560px;">
+
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label">First name <span style="color:var(--color-danger);">*</span></label>
+            {{ invite_form.first_name }}
+            {% if invite_form.first_name.errors %}<div class="form-error">{{ invite_form.first_name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-6">
+            <label class="form-label">Last name <span style="color:var(--color-danger);">*</span></label>
+            {{ invite_form.last_name }}
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-8">
+            <label class="form-label">Email address <span style="color:var(--color-danger);">*</span></label>
+            {{ invite_form.email }}
+            {% if invite_form.email.errors %}<div class="form-error">{{ invite_form.email.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-4">
+            <label class="form-label">Role</label>
+            {{ invite_form.role }}
+          </div>
+        </div>
+
+        <div>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i> Add to team
+          </button>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mt-3">
+  <div class="card-header">
+    <span class="card-title">
+      <i class="bi bi-shield-check me-1" style="color:var(--brand-500);"></i>
+      Role Capability Matrix
+    </span>
+  </div>
+  <div class="card-body" style="padding:1rem 1.25rem;">
+    <div style="overflow:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-muted);background:var(--bg-subtle);">
+            <th style="padding:.5rem .625rem;text-align:left;color:var(--text-secondary);">Capability</th>
+            {% for row in capability_matrix_rows %}
+              <th style="padding:.5rem .625rem;text-align:center;color:var(--text-secondary);">{{ row.role_label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.edit_crm_data }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.edit_crm_data %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_workspace_config }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_workspace_config %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_automations }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_automations %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_message_templates }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_message_templates %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_lead_forms }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_lead_forms %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_organization_settings }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_organization_settings %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_team }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_team %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          <tr>
+            <td style="padding:.5rem .625rem;">{{ capability_labels.manage_compliance }}</td>
+            {% for row in capability_matrix_rows %}
+              <td style="padding:.5rem .625rem;text-align:center;">{% if row.capabilities.manage_compliance %}<i class="bi bi-check2" style="color:var(--color-success);"></i>{% else %}<span style="color:var(--text-muted);">-</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+.form-label {
+  display: block;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: .375rem;
+}
+.form-error {
+  font-size: .75rem;
+  color: var(--color-danger);
+  margin-top: .25rem;
+}
+</style>
+
+{% endblock %}

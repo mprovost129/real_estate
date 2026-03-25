@@ -1,0 +1,66 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ action }}{% endblock %}
+{% block page_title %}Pipelines{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+
+  <nav style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">
+    <a href="{% url 'pipelines:board' %}" style="color:var(--text-muted);">Pipelines</a>
+    <span style="margin:0 .375rem;">/</span>
+    <span style="color:var(--text-primary);">{{ action }}</span>
+  </nav>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">{{ action }}</span>
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="flash flash-error mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+
+          {% for field in form %}
+          <div class="{% if field.name == 'notes' %}col-12{% elif field.name in 'title,contact' %}col-12{% else %}col-md-6{% endif %}">
+            <label for="{{ field.id_for_label }}"
+                   style="display:block;font-size:.8125rem;font-weight:500;
+                          color:var(--text-secondary);margin-bottom:.25rem;">
+              {{ field.label }}
+              {% if field.field.required %}<span style="color:var(--color-danger);">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.errors %}
+              <p style="font-size:.75rem;color:var(--color-danger);margin-top:.25rem;">{{ field.errors.0 }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Deal
+          </button>
+          <a href="{% url 'pipelines:board' %}" class="btn btn-secondary">Cancel</a>
+          {% if object %}
+            <form method="post" action="{% url 'pipelines:deal_delete' object.pk %}"
+                  style="margin-left:auto;"
+                  onsubmit="return confirm('Delete this deal? This cannot be undone.')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--color-danger);">
+                <i class="bi bi-trash me-1"></i>Delete
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

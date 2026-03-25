@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Thank You — {{ oh.display_title }}{% endblock %}
+
+{% block body %}
+<div style="min-height:100vh;background:var(--bg-base);display:flex;align-items:center;justify-content:center;padding:2rem 1rem;">
+  <div style="width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:1rem;">🏡</div>
+    <h1 style="font-size:1.5rem;font-weight:700;color:var(--text-primary);margin:0 0 .5rem;">
+      Thanks, {{ visitor.first_name }}!
+    </h1>
+    <p style="color:var(--text-secondary);font-size:.9375rem;margin-bottom:2rem;">
+      You're signed in. Enjoy the open house at<br>
+      <strong>{{ oh.display_title }}</strong>.
+    </p>
+    <div class="card" style="padding:1.25rem;text-align:left;">
+      <div style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.75rem;">Your sign-in details</div>
+      <div style="font-size:.875rem;display:flex;flex-direction:column;gap:.375rem;">
+        <div><strong>Name:</strong> {{ visitor.full_name }}</div>
+        {% if visitor.email %}<div><strong>Email:</strong> {{ visitor.email }}</div>{% endif %}
+        {% if visitor.phone %}<div><strong>Phone:</strong> {{ visitor.phone }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

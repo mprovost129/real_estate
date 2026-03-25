@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+{% load static %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{% endblock %} — {{ SITE_NAME|default:"Real Estate CRM" }}</title>
+
+  <!-- Theme applied before paint to prevent flash -->
+  <script src="{% static 'js/theme.js' %}"></script>
+
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+    crossorigin="anonymous"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Design system -->
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}" />
+
+  <!-- Tailwind CDN for utility classes (replace with compiled build in production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      corePlugins: { preflight: false },  /* our theme.css handles resets */
+    }
+  </script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  {% block body %}{% endblock %}
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YC6T4uUAgSXBR8NVLdCLWRZsHBDsSK5kEzGvOrz/FHFnyjHUdTXYMHcfqP5MKQP"
+    crossorigin="anonymous"></script>
+
+  <script>
+    if (window.Theme) window.Theme._updateIcon(window.Theme.current() === 'dark');
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

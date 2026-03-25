@@ -1,0 +1,16 @@
+{% comment %}
+  Usage: {% include "properties/_status_badge.html" with status=prop.status label=prop.get_status_display %}
+{% endcomment %}
+{% if status == "active" %}
+  <span class="badge badge-green">{{ label }}</span>
+{% elif status == "pending" or status == "under_contract" %}
+  <span class="badge badge-yellow">{{ label }}</span>
+{% elif status == "sold" %}
+  <span class="badge badge-blue">{{ label }}</span>
+{% elif status == "coming_soon" %}
+  <span class="badge" style="background:#f0fdf4;color:#15803d;">{{ label }}</span>
+{% elif status == "expired" or status == "withdrawn" or status == "cancelled" %}
+  <span class="badge badge-red">{{ label }}</span>
+{% else %}
+  <span class="badge badge-gray">{{ label }}</span>
+{% endif %}

@@ -1,0 +1,141 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Left: Form -->
+  <div class="col-12 col-lg-8">
+    <div class="card" style="padding:1.25rem;">
+    <form method="post" id="templateForm" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div style="color:var(--red-600);margin-bottom:.75rem;font-size:.875rem;">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-12 col-md-8">
+          <label class="form-label">Template Name *</label>
+          <input type="text" name="name" value="{{ form.name.value|default:'' }}"
+                 class="input" placeholder="e.g. New Buyer Lead Follow-Up" required>
+          {% if form.name.errors %}<div style="color:var(--red-600);font-size:.8rem;margin-top:.25rem;">{{ form.name.errors }}</div>{% endif %}
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label">Type *</label>
+          <select name="template_type" class="input" id="typeSelect" onchange="toggleSubject()">
+            {% for val, label in form.fields.template_type.choices %}
+              <option value="{{ val }}" {% if form.template_type.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label">Category</label>
+          <select name="category" class="input">
+            {% for val, label in form.fields.category.choices %}
+              <option value="{{ val }}" {% if form.category.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12" id="subjectRow">
+          <label class="form-label">Subject Line <span style="color:var(--text-muted);font-size:.8rem;">(email only)</span></label>
+          <input type="text" name="subject" value="{{ form.subject.value|default:'' }}"
+                 class="input" placeholder="e.g. Quick question about your home search, {{first_name}}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Body *</label>
+          <textarea name="body" class="input" id="bodyField" rows="14"
+                    placeholder="Hi {{first_name}},&#10;&#10;..." required>{{ form.body.value|default:'' }}</textarea>
+          {% if form.body.errors %}<div style="color:var(--red-600);font-size:.8rem;margin-top:.25rem;">{{ form.body.errors }}</div>{% endif %}
+          <div style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;">
+            Use merge fields from the reference on the right. They'll be replaced with real data when you send.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
+        <button type="submit" class="btn btn-primary">Save Template</button>
+        {% if object %}
+          <a href="{% url 'message_templates:detail' object.pk %}" class="btn btn-ghost">Cancel</a>
+        {% else %}
+          <a href="{% url 'message_templates:list' %}" class="btn btn-ghost">Cancel</a>
+        {% endif %}
+      </div>
+    </form>
+    </div>
+  </div>
+
+  <!-- Right: Merge field reference -->
+  <div class="col-12 col-lg-4">
+    <div class="card" style="padding:1.125rem;position:sticky;top:1rem;">
+      <div style="font-weight:600;font-size:.875rem;margin-bottom:.75rem;">Merge Fields</div>
+      <div style="font-size:.8125rem;color:var(--text-secondary);">
+        Click a field to insert it at the cursor position in the body.
+      </div>
+      <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:.375rem;">
+        {% for tag, description in merge_fields %}
+        <button type="button" class="merge-field-btn" onclick="insertMergeField('{{ tag }}')">
+          <code style="font-size:.8rem;background:var(--bg-subtle);padding:.125rem .3rem;border-radius:3px;">{{ tag }}</code>
+          <span style="color:var(--text-muted);font-size:.75rem;">{{ description }}</span>
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Live character count for SMS -->
+      <div id="smsCounter" style="display:none;margin-top:1rem;padding:.625rem;background:var(--bg-subtle);border-radius:6px;">
+        <div style="font-size:.75rem;font-weight:600;color:var(--text-muted);margin-bottom:.25rem;">SMS Character Count</div>
+        <div id="charCount" style="font-size:1.125rem;font-weight:700;color:var(--text-primary);">0</div>
+        <div style="font-size:.75rem;color:var(--text-muted);">
+          <span id="segmentCount">1</span> segment(s) · 160 chars/segment
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+.merge-field-btn {
+  display: flex; align-items: center; gap: .5rem;
+  background: none; border: 1px solid var(--border-muted);
+  border-radius: 6px; padding: .375rem .625rem; cursor: pointer;
+  text-align: left; width: 100%;
+  transition: background .15s;
+}
+.merge-field-btn:hover { background: var(--bg-subtle); }
+</style>
+
+<script>
+function toggleSubject() {
+  const type = document.getElementById('typeSelect').value;
+  document.getElementById('subjectRow').style.display = type === 'email' ? '' : 'none';
+  document.getElementById('smsCounter').style.display = type === 'sms' ? '' : 'none';
+}
+
+function insertMergeField(tag) {
+  const ta = document.getElementById('bodyField');
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const text  = ta.value;
+  ta.value = text.slice(0, start) + tag + text.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+  ta.focus();
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const len  = document.getElementById('bodyField').value.length;
+  const segs = Math.ceil(len / 160) || 1;
+  document.getElementById('charCount').textContent = len;
+  document.getElementById('segmentCount').textContent = segs;
+  document.getElementById('charCount').style.color = len > 160 ? 'var(--red-600)' : 'var(--text-primary)';
+}
+
+document.getElementById('bodyField').addEventListener('input', updateCharCount);
+toggleSubject();
+updateCharCount();
+</script>
+{% endblock %}

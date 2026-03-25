@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ lf.headline }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .5rem; color: #1e293b; }
+    .sub { font-size: .9375rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; font-size: .875rem; font-weight: 600; color: #374151; margin-bottom: .375rem; }
+    input[type=text], input[type=email], input[type=tel], textarea, select {
+      width: 100%;
+      padding: .5rem .75rem;
+      font-size: .9375rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      color: #1e293b;
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+    }
+    textarea { resize: vertical; min-height: 100px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .75rem 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+      margin-top: 1.25rem;
+    }
+    .btn:hover { background: #4f46e5; }
+    .errors {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: .75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: .875rem;
+      color: #dc2626;
+    }
+    .errors li { margin: .2rem 0; }
+    .required { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <h1>{{ lf.headline }}</h1>
+    {% if lf.subheadline %}
+      <div class="sub">{{ lf.subheadline|linebreaksbr }}</div>
+    {% endif %}
+
+    {% if errors %}
+    <div class="errors">
+      <ul style="margin:0;padding-left:1.25rem;">
+        {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="row">
+        <div class="field">
+          <label>First Name <span class="required">*</span></label>
+          <input type="text" name="first_name" value="{{ post.first_name|default:'' }}" required>
+        </div>
+        <div class="field">
+          <label>Last Name <span class="required">*</span></label>
+          <input type="text" name="last_name" value="{{ post.last_name|default:'' }}" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Email <span class="required">*</span></label>
+        <input type="email" name="email" value="{{ post.email|default:'' }}" required>
+      </div>
+
+      {% if lf.show_phone %}
+      <div class="field">
+        <label>
+          Phone{% if lf.require_phone %} <span class="required">*</span>{% endif %}
+        </label>
+        <input type="tel" name="phone" value="{{ post.phone|default:'' }}"
+               {% if lf.require_phone %}required{% endif %}>
+      </div>
+      {% endif %}
+
+      {% if lf.show_address %}
+      <div class="field">
+        <label>Property Address of Interest</label>
+        <input type="text" name="address" value="{{ post.address|default:'' }}"
+               placeholder="e.g. 123 Main St, Springfield">
+      </div>
+      {% endif %}
+
+      {% if lf.show_budget %}
+      <div class="field">
+        <label>Budget / Price Range</label>
+        <input type="text" name="budget" value="{{ post.budget|default:'' }}"
+               placeholder="e.g. $400,000–$550,000">
+      </div>
+      {% endif %}
+
+      {% if lf.show_timeline %}
+      <div class="field">
+        <label>When are you looking to move?</label>
+        <select name="timeline">
+          <option value="">— Select —</option>
+          {% for val in timeline_choices %}
+          <option {% if post.timeline == val %}selected{% endif %}>{{ val }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      {% if lf.show_message %}
+      <div class="field">
+        <label>
+          Message{% if lf.require_message %} <span class="required">*</span>{% endif %}
+        </label>
+        <textarea name="message"
+                  {% if lf.require_message %}required{% endif %}
+                  placeholder="Tell us a bit about what you're looking for…">{{ post.message|default:'' }}</textarea>
+      </div>
+      {% endif %}
+
+      <button type="submit">{{ lf.button_text }}</button>
+    </form>
+
+  </div>
+</body>
+</html>

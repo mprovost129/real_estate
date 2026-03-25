@@ -1,0 +1,366 @@
+{% extends "base_app.html" %}
+
+{% block title %}Automation Rule{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+
+{{ builder_options|json_script:"builder-options" }}
+
+<div class="row g-3">
+  <div class="col-12 col-xl-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" novalidate id="automation-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="flash flash-danger">
+              {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label for="{{ form.name.id_for_label }}" class="label">Rule Name</label>
+              {{ form.name }}
+              {% for err in form.name.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label for="{{ form.trigger_type.id_for_label }}" class="label">Trigger</label>
+              {{ form.trigger_type }}
+              {% for err in form.trigger_type.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Active</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt-3" style="border:1px solid var(--border-muted);">
+            <div class="card-header" style="padding:.6rem .9rem;">
+              <span class="card-title" style="font-size:.85rem;"><i class="bi bi-magic me-1"></i>Visual Builder (no JSON required)</span>
+            </div>
+            <div class="card-body" style="padding:.85rem;">
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem;">
+                <label style="font-size:.75rem;color:var(--text-secondary);">Condition Mode</label>
+                <select id="condition-mode" class="input" style="max-width:160px;">
+                  <option value="all">Match ALL conditions</option>
+                  <option value="any">Match ANY condition</option>
+                </select>
+                <button type="button" class="btn btn-ghost btn-sm" id="add-condition">+ Condition</button>
+              </div>
+              <div id="condition-rows" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:1rem 0 .75rem;">
+                <label style="font-size:.75rem;color:var(--text-secondary);">Actions</label>
+                <button type="button" class="btn btn-ghost btn-sm" id="add-action">+ Action</button>
+              </div>
+              <div id="action-rows" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+
+              <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:.9rem;">
+                <div class="form-check" style="margin:0;">
+                  <input class="form-check-input" type="checkbox" id="use-builder-on-save" checked>
+                  <label class="form-check-label" for="use-builder-on-save">Use visual builder values on save</label>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="apply-builder">Apply Builder to JSON</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="load-from-json">Load Builder from JSON</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12">
+              <label for="{{ form.conditions.id_for_label }}" class="label">Conditions JSON (advanced)</label>
+              {{ form.conditions }}
+              <div class="helper">{{ form.conditions.help_text }}</div>
+              {% for err in form.conditions.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+            </div>
+
+            <div class="col-12">
+              <label for="{{ form.actions.id_for_label }}" class="label">Actions JSON (advanced)</label>
+              {{ form.actions }}
+              <div class="helper">{{ form.actions.help_text }}</div>
+              {% for err in form.actions.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;display:flex;gap:.5rem;">
+            <button type="submit" class="btn btn-primary btn-sm">Save Rule</button>
+            <a href="{% url 'automations:list' %}" class="btn btn-ghost btn-sm">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-code-square me-1"></i>JSON Samples</span>
+      </div>
+      <div class="card-body">
+        <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.3rem;">Lead created conditions:</div>
+        <pre style="white-space:pre-wrap;font-size:.75rem;">{{ samples.conditions_lead }}</pre>
+        <div style="font-size:.8rem;color:var(--text-muted);margin:.7rem 0 .3rem;">Lead actions:</div>
+        <pre style="white-space:pre-wrap;font-size:.75rem;">{{ samples.actions_lead }}</pre>
+        <div style="font-size:.8rem;color:var(--text-muted);margin:.7rem 0 .3rem;">Stage changed conditions:</div>
+        <pre style="white-space:pre-wrap;font-size:.75rem;">{{ samples.conditions_stage }}</pre>
+        <div style="font-size:.8rem;color:var(--text-muted);margin:.7rem 0 .3rem;">Stage actions:</div>
+        <pre style="white-space:pre-wrap;font-size:.75rem;">{{ samples.actions_stage }}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const optsNode = document.getElementById("builder-options");
+  if (!optsNode) return;
+  const opts = JSON.parse(optsNode.textContent);
+  const conditionRows = document.getElementById("condition-rows");
+  const actionRows = document.getElementById("action-rows");
+  const conditionMode = document.getElementById("condition-mode");
+  const conditionsField = document.getElementById("id_conditions");
+  const actionsField = document.getElementById("id_actions");
+
+  const listToCsv = (arr) => (arr || []).join(", ");
+  const parseCsv = (s) => (s || "").split(",").map(v => v.trim()).filter(Boolean);
+
+  function optionTags(items) {
+    return items.map(x => `<option value="${x.value}">${x.label}</option>`).join("");
+  }
+
+  function addConditionRow(data = {}) {
+    const row = document.createElement("div");
+    row.className = "row g-2 align-items-end";
+    row.innerHTML = `
+      <div class="col-md-4">
+        <label class="label">Field</label>
+        <select class="input c-field">
+          <option value="source_in">Source In</option>
+          <option value="contact_type_in">Contact Type In</option>
+          <option value="pipeline_type_in">Pipeline Type In</option>
+          <option value="stage_in">Stage In (name or id)</option>
+          <option value="days_overdue_gte">Days Overdue >=</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="label">Value</label>
+        <input class="input c-value" placeholder="Comma-separated for list fields">
+      </div>
+      <div class="col-md-2">
+        <button type="button" class="btn btn-ghost btn-sm c-remove" style="width:100%;">Remove</button>
+      </div>
+    `;
+    row.querySelector(".c-field").value = data.field || "source_in";
+    row.querySelector(".c-value").value = data.value || "";
+    row.querySelector(".c-remove").addEventListener("click", () => row.remove());
+    conditionRows.appendChild(row);
+  }
+
+  function addActionRow(data = {}) {
+    const row = document.createElement("div");
+    row.className = "row g-2 align-items-end";
+    row.innerHTML = `
+      <div class="col-md-3">
+        <label class="label">Type</label>
+        <select class="input a-type">
+          <option value="create_task">Create Task</option>
+          <option value="notify">Notify</option>
+          <option value="assign_owner">Assign Owner</option>
+          <option value="create_note">Create Note</option>
+          <option value="change_stage">Change Stage</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="label">Primary Text</label>
+        <input class="input a-text1" placeholder="Title, body, etc">
+      </div>
+      <div class="col-md-3">
+        <label class="label">Secondary Text</label>
+        <input class="input a-text2" placeholder="Description/body">
+      </div>
+      <div class="col-md-1">
+        <label class="label">Num</label>
+        <input class="input a-num" type="number" placeholder="0">
+      </div>
+      <div class="col-md-2">
+        <button type="button" class="btn btn-ghost btn-sm a-remove" style="width:100%;">Remove</button>
+      </div>
+      <div class="col-12" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;">
+        <select class="input a-task-type"><option value="">Task Type (optional)</option>${optionTags(opts.task_type_choices || [])}</select>
+        <select class="input a-priority"><option value="">Priority (optional)</option>${optionTags(opts.priority_choices || [])}</select>
+        <select class="input a-note-type"><option value="">Note Type (optional)</option>${optionTags(opts.note_type_choices || [])}</select>
+        <select class="input a-target">
+          <option value="contact">Assign Target: Contact</option>
+          <option value="deal">Assign Target: Deal</option>
+        </select>
+      </div>
+      <div class="col-12" style="display:flex;gap:.5rem;align-items:center;">
+        <input class="input a-user-id" type="number" min="1" placeholder="user_id (optional)" style="max-width:180px;">
+        <div class="form-check" style="margin:0;">
+          <input class="form-check-input a-use-trigger-user" type="checkbox" id="">
+          <label class="form-check-label">Use Trigger User</label>
+        </div>
+      </div>
+    `;
+    row.querySelector(".a-type").value = data.type || "create_task";
+    row.querySelector(".a-text1").value = data.text1 || "";
+    row.querySelector(".a-text2").value = data.text2 || "";
+    row.querySelector(".a-num").value = data.num ?? "";
+    row.querySelector(".a-task-type").value = data.task_type || "";
+    row.querySelector(".a-priority").value = data.priority || "";
+    row.querySelector(".a-note-type").value = data.note_type || "";
+    row.querySelector(".a-target").value = data.target || "contact";
+    row.querySelector(".a-user-id").value = data.user_id ?? "";
+    row.querySelector(".a-use-trigger-user").checked = !!data.use_trigger_user;
+    row.querySelector(".a-remove").addEventListener("click", () => row.remove());
+    actionRows.appendChild(row);
+  }
+
+  function buildConditions() {
+    const rows = [...conditionRows.querySelectorAll(".row")];
+    const parts = [];
+    for (const row of rows) {
+      const field = row.querySelector(".c-field").value;
+      const raw = row.querySelector(".c-value").value || "";
+      if (!raw.trim()) continue;
+      if (field === "days_overdue_gte") {
+        const num = Number(raw);
+        if (!Number.isFinite(num)) continue;
+        parts.push({ days_overdue_gte: Math.floor(num) });
+      } else if (field === "stage_in") {
+        const list = parseCsv(raw).map(v => (/^\d+$/.test(v) ? Number(v) : v));
+        if (list.length) parts.push({ stage_in: list });
+      } else {
+        const list = parseCsv(raw);
+        if (list.length) parts.push({ [field]: list });
+      }
+    }
+    if (!parts.length) return {};
+    return { [conditionMode.value || "all"]: parts };
+  }
+
+  function buildActions() {
+    const rows = [...actionRows.querySelectorAll(".row")];
+    const actions = [];
+    for (const row of rows) {
+      const type = row.querySelector(".a-type").value;
+      const text1 = row.querySelector(".a-text1").value.trim();
+      const text2 = row.querySelector(".a-text2").value.trim();
+      const numRaw = row.querySelector(".a-num").value;
+      const num = numRaw === "" ? null : Number(numRaw);
+      const taskType = row.querySelector(".a-task-type").value;
+      const priority = row.querySelector(".a-priority").value;
+      const noteType = row.querySelector(".a-note-type").value;
+      const target = row.querySelector(".a-target").value;
+      const userIdRaw = row.querySelector(".a-user-id").value;
+      const userId = userIdRaw ? Number(userIdRaw) : null;
+      const useTriggerUser = row.querySelector(".a-use-trigger-user").checked;
+
+      const a = { type };
+      if (type === "create_task") {
+        if (!text1) continue;
+        a.title = text1;
+        if (text2) a.description = text2;
+        if (Number.isFinite(num)) a.due_in_days = Math.floor(num);
+        if (taskType) a.task_type = taskType;
+        if (priority) a.priority = priority;
+        if (Number.isInteger(userId) && userId > 0) a.user_id = userId;
+        if (useTriggerUser) a.use_trigger_user = true;
+      } else if (type === "notify") {
+        if (!text1) continue;
+        a.title = text1;
+        if (text2) a.body = text2;
+        if (Number.isInteger(userId) && userId > 0) a.user_id = userId;
+        if (useTriggerUser) a.use_trigger_user = true;
+      } else if (type === "assign_owner") {
+        a.target = target || "contact";
+        if (Number.isInteger(userId) && userId > 0) a.user_id = userId;
+        if (useTriggerUser) a.use_trigger_user = true;
+      } else if (type === "create_note") {
+        if (!text1) continue;
+        a.body = text1;
+        if (noteType) a.note_type = noteType;
+      } else if (type === "change_stage") {
+        if (!Number.isInteger(num) || num < 1) continue;
+        a.stage_id = Math.floor(num);
+      }
+      actions.push(a);
+    }
+    return actions;
+  }
+
+  function applyBuilderToJson() {
+    conditionsField.value = JSON.stringify(buildConditions(), null, 2);
+    actionsField.value = JSON.stringify(buildActions(), null, 2);
+  }
+
+  function loadBuilderFromJson() {
+    conditionRows.innerHTML = "";
+    actionRows.innerHTML = "";
+    let conditions = {};
+    let actions = [];
+    try { conditions = JSON.parse(conditionsField.value || "{}"); } catch (e) {}
+    try { actions = JSON.parse(actionsField.value || "[]"); } catch (e) {}
+
+    if (conditions.all || conditions.any) {
+      const mode = conditions.any ? "any" : "all";
+      conditionMode.value = mode;
+      const list = conditions[mode] || [];
+      for (const node of list) {
+        const key = Object.keys(node || {})[0];
+        const value = node ? node[key] : "";
+        if (!key) continue;
+        addConditionRow({
+          field: key,
+          value: Array.isArray(value) ? listToCsv(value) : String(value ?? ""),
+        });
+      }
+    } else {
+      for (const key of Object.keys(conditions || {})) {
+        if (key === "not") continue;
+        const value = conditions[key];
+        addConditionRow({
+          field: key,
+          value: Array.isArray(value) ? listToCsv(value) : String(value ?? ""),
+        });
+      }
+    }
+
+    for (const a of actions || []) {
+      addActionRow({
+        type: a.type,
+        text1: a.title || a.body || "",
+        text2: a.description || a.body || "",
+        num: a.due_in_days ?? a.stage_id ?? "",
+        task_type: a.task_type || "",
+        priority: a.priority || "",
+        note_type: a.note_type || "",
+        target: a.target || "contact",
+        user_id: a.user_id ?? "",
+        use_trigger_user: !!a.use_trigger_user,
+      });
+    }
+
+    if (!conditionRows.children.length) addConditionRow();
+    if (!actionRows.children.length) addActionRow();
+  }
+
+  document.getElementById("add-condition").addEventListener("click", () => addConditionRow());
+  document.getElementById("add-action").addEventListener("click", () => addActionRow());
+  document.getElementById("apply-builder").addEventListener("click", applyBuilderToJson);
+  document.getElementById("load-from-json").addEventListener("click", loadBuilderFromJson);
+  document.getElementById("automation-form").addEventListener("submit", () => {
+    if (document.getElementById("use-builder-on-save").checked) applyBuilderToJson();
+  });
+
+  loadBuilderFromJson();
+})();
+</script>
+
+{% endblock %}

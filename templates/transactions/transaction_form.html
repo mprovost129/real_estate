@@ -1,0 +1,282 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;">
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <!-- Identity -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Identity</div>
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Transaction Type</label>
+        {{ form.transaction_type }}
+        {% if form.transaction_type.errors %}<div class="invalid-feedback d-block">{{ form.transaction_type.errors }}</div>{% endif %}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Status</label>
+        {{ form.status }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Financing Type</label>
+        {{ form.financing_type }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">MLS Number</label>
+        {{ form.mls_number }}
+      </div>
+      <div class="col-12 col-md-8">
+        <label class="form-label">Property Address <span style="color:var(--text-muted);font-size:.8rem;">(if no property record)</span></label>
+        {{ form.property_address }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Links -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Links</div>
+    <div class="row g-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label">Linked Property</label>
+        {{ form.linked_property }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Pipeline Deal</label>
+        {{ form.deal }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Buyer Contact</label>
+        {{ form.buyer_contact }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Seller Contact</label>
+        {{ form.seller_contact }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Agents</div>
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Listing Agent</label>
+        {{ form.listing_agent }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Buyer's Agent</label>
+        {{ form.buyers_agent }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Transaction Coordinator</label>
+        {{ form.transaction_coordinator }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Financial</div>
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Purchase Price</label>
+        {{ form.purchase_price }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Earnest Money</label>
+        {{ form.earnest_money }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Earnest Money Due</label>
+        {{ form.earnest_money_due }}
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Down Payment</label>
+        {{ form.down_payment }}
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Loan Amount</label>
+        {{ form.loan_amount }}
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Commission %</label>
+        {{ form.commission_pct }}
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">Commission $</label>
+        {{ form.commission_amount }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Referral Fee</label>
+        {{ form.referral_fee }}
+      </div>
+      <div class="col-12 col-md-8 d-flex align-items-end">
+        <div class="form-check">
+          {{ form.earnest_received }}
+          <label class="form-check-label" for="{{ form.earnest_received.id_for_label }}">Earnest Received</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Third Parties -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Third Parties</div>
+    <div class="row g-3">
+      <div class="col-12"><div style="font-size:.8125rem;font-weight:600;color:var(--text-secondary);margin-bottom:.25rem;">Lender</div></div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Company Name</label>
+        {{ form.lender_name }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Contact Name</label>
+        {{ form.lender_contact }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Email</label>
+        {{ form.lender_email }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Phone</label>
+        {{ form.lender_phone }}
+      </div>
+
+      <div class="col-12"><div style="font-size:.8125rem;font-weight:600;color:var(--text-secondary);margin-bottom:.25rem;margin-top:.5rem;">Title Company</div></div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Company Name</label>
+        {{ form.title_company }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Title Officer</label>
+        {{ form.title_officer }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Email</label>
+        {{ form.title_email }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Phone</label>
+        {{ form.title_phone }}
+      </div>
+
+      <div class="col-12"><div style="font-size:.8125rem;font-weight:600;color:var(--text-secondary);margin-bottom:.25rem;margin-top:.5rem;">Closing Attorney</div></div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Attorney Name</label>
+        {{ form.closing_attorney }}
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label">Email</label>
+        {{ form.closing_email }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Dates -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Key Dates</div>
+    <div class="row g-3">
+      <div class="col-12 col-md-4">
+        <label class="form-label">Contract Date</label>
+        {{ form.contract_date }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Inspection Deadline</label>
+        {{ form.inspection_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Inspection Objection</label>
+        {{ form.inspection_objection_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Inspection Resolution</label>
+        {{ form.inspection_resolution_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Appraisal Deadline</label>
+        {{ form.appraisal_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Financing Deadline</label>
+        {{ form.financing_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Title Deadline</label>
+        {{ form.title_deadline }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Closing Date</label>
+        {{ form.closing_date }}
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Possession Date</label>
+        {{ form.possession_date }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Milestone Flags -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:1rem;">Milestones</div>
+    <div class="row g-2">
+      <div class="col-12 col-md-4">
+        <div class="form-check">
+          {{ form.inspection_completed }}
+          <label class="form-check-label" for="{{ form.inspection_completed.id_for_label }}">Inspection Completed</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="form-check">
+          {{ form.appraisal_completed }}
+          <label class="form-check-label" for="{{ form.appraisal_completed.id_for_label }}">Appraisal Completed</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="form-check">
+          {{ form.financing_approved }}
+          <label class="form-check-label" for="{{ form.financing_approved.id_for_label }}">Financing Approved</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="form-check">
+          {{ form.title_clear }}
+          <label class="form-check-label" for="{{ form.title_clear.id_for_label }}">Title Clear</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="form-check">
+          {{ form.final_walkthrough_done }}
+          <label class="form-check-label" for="{{ form.final_walkthrough_done.id_for_label }}">Final Walkthrough Done</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">Closed At</label>
+        {{ form.closed_at }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="card" style="padding:1.25rem;margin-bottom:1.5rem;">
+    <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Internal Notes</div>
+    {{ form.notes }}
+  </div>
+
+  <div style="display:flex;gap:.75rem;">
+    <button type="submit" class="btn btn-primary">Save Transaction</button>
+    {% if object %}
+      <a href="{% url 'transactions:detail' object.pk %}" class="btn btn-ghost">Cancel</a>
+    {% else %}
+      <a href="{% url 'transactions:list' %}" class="btn btn-ghost">Cancel</a>
+    {% endif %}
+  </div>
+</form>
+</div>
+{% endblock %}

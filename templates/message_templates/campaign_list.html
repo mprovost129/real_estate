@@ -1,0 +1,58 @@
+{% extends "base_app.html" %}
+
+{% block title %}Campaigns{% endblock %}
+{% block page_title %}Drip Campaigns{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-envelope-paper"></i> Templates
+  </a>
+  <a href="{% url 'message_templates:campaign_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Campaign
+  </a>
+{% endblock %}
+
+{% block content %}
+<form method="get" action="" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+  <input type="text" name="q" value="{{ q }}" class="input" placeholder="Search campaigns..." style="max-width:220px;">
+  <select name="status" class="input" style="max-width:160px;">
+    <option value="">Any Status</option>
+    <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+  </select>
+  <button type="submit" class="btn btn-ghost btn-sm">Filter</button>
+</form>
+
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;">
+  <span class="badge badge-gray">Active: {{ count_active }}</span>
+  <span class="badge badge-gray">Inactive: {{ count_inactive }}</span>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:.25rem 1.25rem;">
+    {% if campaigns %}
+      {% for campaign in campaigns %}
+      <div style="padding:.75rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+        <div>
+          <a href="{% url 'message_templates:campaign_detail' campaign.pk %}" style="font-weight:600;color:var(--text-primary);text-decoration:none;">
+            {{ campaign.name }}
+          </a>
+          <div style="font-size:.8125rem;color:var(--text-muted);">
+            {{ campaign.get_channel_display }} · {{ campaign.get_category_display }} ·
+            {% if campaign.is_active %}Active{% else %}Inactive{% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:.35rem;">
+          <a href="{% url 'message_templates:campaign_update' campaign.pk %}" class="btn btn-ghost btn-sm">Edit</a>
+          <a href="{% url 'message_templates:campaign_delete' campaign.pk %}" class="btn btn-ghost btn-sm">Delete</a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);">
+        No campaigns yet.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,441 @@
+{% extends "base_app.html" %}
+{% load humanize %}
+
+{% block title %}{{ tx.display_address }} — Transaction{% endblock %}
+{% block page_title %}{{ tx.display_address }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'transactions:update' tx.pk %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <a href="{% url 'transactions:delete' tx.pk %}" class="btn btn-ghost btn-sm" style="color:var(--red-600);">
+    <i class="bi bi-trash"></i> Delete
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+  <!-- LEFT: Main info + Checklist -->
+  <div class="col-12 col-lg-8">
+
+    <!-- Status strip -->
+    <div class="card" style="margin-bottom:1rem;padding:1rem 1.25rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        {% if tx.status == 'active' %}
+          <span class="badge badge-green" style="font-size:.875rem;padding:.375rem .75rem;">Active</span>
+        {% elif tx.status == 'pending' %}
+          <span class="badge badge-yellow" style="font-size:.875rem;padding:.375rem .75rem;">Pending</span>
+        {% elif tx.status == 'clear_to_close' %}
+          <span class="badge badge-blue" style="font-size:.875rem;padding:.375rem .75rem;">Clear to Close</span>
+        {% elif tx.status == 'closed' %}
+          <span class="badge badge-gray" style="font-size:.875rem;padding:.375rem .75rem;">Closed</span>
+        {% elif tx.status == 'on_hold' %}
+          <span class="badge badge-orange" style="font-size:.875rem;padding:.375rem .75rem;">On Hold</span>
+        {% else %}
+          <span class="badge badge-red" style="font-size:.875rem;padding:.375rem .75rem;">{{ tx.get_status_display }}</span>
+        {% endif %}
+        <span style="color:var(--text-secondary);font-size:.875rem;">{{ tx.get_transaction_type_display }}</span>
+        <span style="color:var(--text-secondary);font-size:.875rem;">{{ tx.get_financing_type_display }}</span>
+        {% if tx.mls_number %}
+          <span style="color:var(--text-muted);font-size:.875rem;">MLS# {{ tx.mls_number }}</span>
+        {% endif %}
+        {% if missing_document_count %}
+          <span class="badge badge-red" style="font-size:.7rem;">
+            {{ missing_document_count }} missing docs
+          </span>
+        {% endif %}
+        <span style="margin-left:auto;font-size:.8125rem;color:var(--text-muted);">
+          Created {{ tx.created_at|date:"M j, Y" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Alerts: overdue dates -->
+    {% if overdue_dates %}
+    <div class="card" style="margin-bottom:1rem;padding:.875rem 1.125rem;border-left:3px solid var(--red-500);">
+      <div style="font-weight:600;color:var(--red-600);margin-bottom:.375rem;font-size:.875rem;">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>Overdue Deadlines
+      </div>
+      {% for label, date in overdue_dates %}
+        <div style="font-size:.8125rem;color:var(--text-secondary);">{{ label }}: {{ date }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Alerts: upcoming dates -->
+    {% if upcoming_dates %}
+    <div class="card" style="margin-bottom:1rem;padding:.875rem 1.125rem;border-left:3px solid var(--brand-500);">
+      <div style="font-weight:600;color:var(--brand-600);margin-bottom:.375rem;font-size:.875rem;">
+        <i class="bi bi-calendar-event me-1"></i>Upcoming (Next 14 Days)
+      </div>
+      {% for label, date in upcoming_dates %}
+        <div style="font-size:.8125rem;color:var(--text-secondary);">{{ label }}: {{ date }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Checklist progress -->
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem 1.25rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.625rem;">
+        <span style="font-weight:600;font-size:.9375rem;">Transaction Checklist</span>
+        <span style="font-size:.8125rem;color:var(--text-muted);">{{ checklist_done }}/{{ checklist_total }} complete</span>
+      </div>
+      <div style="background:var(--border-muted);border-radius:4px;height:6px;margin-bottom:1rem;">
+        <div style="background:var(--brand-500);height:6px;border-radius:4px;width:{{ checklist_progress }}%;"></div>
+      </div>
+
+      {% for category, items in checklist_grouped.items %}
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.5rem;">
+          {{ category }}
+        </div>
+        {% for item in items %}
+        <div style="display:flex;align-items:flex-start;gap:.625rem;padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <!-- Toggle checkbox -->
+          <form method="post" action="{% url 'transactions:checklist_toggle' tx.pk item.pk %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" style="background:none;border:none;padding:0;cursor:pointer;margin-top:1px;">
+              {% if item.status == 'done' %}
+                <i class="bi bi-check-circle-fill" style="color:var(--brand-500);font-size:1rem;"></i>
+              {% elif item.status == 'na' or item.status == 'waived' %}
+                <i class="bi bi-dash-circle" style="color:var(--text-muted);font-size:1rem;"></i>
+              {% elif item.is_overdue %}
+                <i class="bi bi-circle" style="color:var(--red-500);font-size:1rem;"></i>
+              {% else %}
+                <i class="bi bi-circle" style="color:var(--border-strong);font-size:1rem;"></i>
+              {% endif %}
+            </button>
+          </form>
+
+          <div style="flex:1;">
+            <div style="font-size:.875rem;{% if item.status == 'done' %}text-decoration:line-through;color:var(--text-muted);{% elif item.is_overdue %}color:var(--red-600);{% endif %}">
+              {{ item.title }}
+              {% if item.is_required %}<span style="font-size:.7rem;color:var(--text-muted);margin-left:.25rem;">Required</span>{% endif %}
+            </div>
+            <div style="font-size:.75rem;color:var(--text-muted);display:flex;gap:.75rem;margin-top:.125rem;flex-wrap:wrap;">
+              {% if item.due_date %}<span><i class="bi bi-calendar3 me-1"></i>{{ item.due_date }}</span>{% endif %}
+              {% if item.assigned_to %}<span><i class="bi bi-person me-1"></i>{{ item.assigned_to.full_name }}</span>{% endif %}
+              {% if item.notes %}<span>{{ item.notes|truncatechars:60 }}</span>{% endif %}
+            </div>
+          </div>
+
+          <!-- Status badge -->
+          <div>
+            {% if item.status == 'done' %}
+              <span class="badge badge-green" style="font-size:.7rem;">Done</span>
+            {% elif item.status == 'na' %}
+              <span class="badge badge-gray" style="font-size:.7rem;">N/A</span>
+            {% elif item.status == 'waived' %}
+              <span class="badge badge-gray" style="font-size:.7rem;">Waived</span>
+            {% elif item.is_overdue %}
+              <span class="badge badge-red" style="font-size:.7rem;">Overdue</span>
+            {% endif %}
+          </div>
+
+          <!-- Edit button -->
+          <button type="button" class="btn btn-ghost btn-sm"
+                  style="padding:.125rem .375rem;font-size:.75rem;"
+                  onclick="openItemModal({{ item.pk }}, '{{ item.status }}', '{{ item.due_date|default:'' }}', '{{ item.assigned_to.pk|default:'' }}', `{{ item.notes|escapejs }}`)">
+            <i class="bi bi-pencil"></i>
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Notes -->
+    <div class="card" style="padding:1.125rem 1.25rem;">
+      <div style="font-weight:600;font-size:.9375rem;margin-bottom:.875rem;">Notes</div>
+      <form method="post" action="{% url 'transactions:add_note' tx.pk %}" style="margin-bottom:1rem;">
+        {% csrf_token %}
+        {{ note_form.body }}
+        <button type="submit" class="btn btn-primary btn-sm" style="margin-top:.5rem;">Add Note</button>
+      </form>
+      {% for note in notes %}
+      <div style="padding:.625rem 0;border-bottom:1px solid var(--border-muted);">
+        <div style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.25rem;">
+          {% if note.author %}{{ note.author.full_name }}{% else %}System{% endif %}
+          &middot; {{ note.created_at|date:"M j, Y g:i A" }}
+        </div>
+        <div style="font-size:.875rem;white-space:pre-wrap;">{{ note.body }}</div>
+      </div>
+      {% empty %}
+      <div style="color:var(--text-muted);font-size:.875rem;">No notes yet.</div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Sidebar details -->
+  <div class="col-12 col-lg-4">
+
+    <!-- Contacts -->
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Parties</div>
+      {% if tx.buyer_contact %}
+      <div style="margin-bottom:.625rem;">
+        <div style="font-size:.75rem;color:var(--text-muted);">Buyer</div>
+        <a href="{% url 'contacts:detail' tx.buyer_contact.pk %}" style="font-weight:500;color:var(--text-primary);text-decoration:none;">
+          {{ tx.buyer_contact.full_name }}
+        </a>
+      </div>
+      {% endif %}
+      {% if tx.seller_contact %}
+      <div style="margin-bottom:.625rem;">
+        <div style="font-size:.75rem;color:var(--text-muted);">Seller</div>
+        <a href="{% url 'contacts:detail' tx.seller_contact.pk %}" style="font-weight:500;color:var(--text-primary);text-decoration:none;">
+          {{ tx.seller_contact.full_name }}
+        </a>
+      </div>
+      {% endif %}
+      {% if tx.listing_agent %}
+      <div style="margin-bottom:.625rem;">
+        <div style="font-size:.75rem;color:var(--text-muted);">Listing Agent</div>
+        <div style="font-size:.875rem;">{{ tx.listing_agent.full_name }}</div>
+      </div>
+      {% endif %}
+      {% if tx.buyers_agent %}
+      <div style="margin-bottom:.625rem;">
+        <div style="font-size:.75rem;color:var(--text-muted);">Buyer's Agent</div>
+        <div style="font-size:.875rem;">{{ tx.buyers_agent.full_name }}</div>
+      </div>
+      {% endif %}
+      {% if tx.transaction_coordinator %}
+      <div>
+        <div style="font-size:.75rem;color:var(--text-muted);">TC</div>
+        <div style="font-size:.875rem;">{{ tx.transaction_coordinator.full_name }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Financial -->
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Financial</div>
+      {% if tx.purchase_price %}
+      <div class="detail-row"><span>Purchase Price</span><span>${{ tx.purchase_price|intcomma }}</span></div>
+      {% endif %}
+      {% if tx.earnest_money %}
+      <div class="detail-row"><span>Earnest Money</span><span>${{ tx.earnest_money|intcomma }}</span></div>
+      {% endif %}
+      {% if tx.down_payment %}
+      <div class="detail-row"><span>Down Payment</span><span>${{ tx.down_payment|intcomma }}</span></div>
+      {% endif %}
+      {% if tx.loan_amount %}
+      <div class="detail-row"><span>Loan Amount</span><span>${{ tx.loan_amount|intcomma }}</span></div>
+      {% endif %}
+      {% if tx.commission_pct %}
+      <div class="detail-row"><span>Commission</span><span>{{ tx.commission_pct }}%</span></div>
+      {% endif %}
+      {% if tx.commission_amount %}
+      <div class="detail-row"><span>Commission $</span><span>${{ tx.commission_amount|intcomma }}</span></div>
+      {% endif %}
+      {% if tx.referral_fee %}
+      <div class="detail-row"><span>Referral Fee</span><span>${{ tx.referral_fee|intcomma }}</span></div>
+      {% endif %}
+      <div class="detail-row">
+        <span>Earnest Received</span>
+        <span>{% if tx.earnest_received %}<i class="bi bi-check-circle-fill" style="color:var(--brand-500);"></i>{% else %}<i class="bi bi-circle" style="color:var(--border-strong);"></i>{% endif %}</span>
+      </div>
+    </div>
+
+    <!-- Key Dates -->
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Key Dates</div>
+      {% if tx.contract_date %}<div class="detail-row"><span>Contract</span><span>{{ tx.contract_date }}</span></div>{% endif %}
+      {% if tx.earnest_money_due %}<div class="detail-row"><span>Earnest Due</span><span>{{ tx.earnest_money_due }}</span></div>{% endif %}
+      {% if tx.inspection_deadline %}<div class="detail-row"><span>Inspection</span><span>{{ tx.inspection_deadline }}</span></div>{% endif %}
+      {% if tx.inspection_objection_deadline %}<div class="detail-row"><span>Insp. Objection</span><span>{{ tx.inspection_objection_deadline }}</span></div>{% endif %}
+      {% if tx.inspection_resolution_deadline %}<div class="detail-row"><span>Insp. Resolution</span><span>{{ tx.inspection_resolution_deadline }}</span></div>{% endif %}
+      {% if tx.appraisal_deadline %}<div class="detail-row"><span>Appraisal</span><span>{{ tx.appraisal_deadline }}</span></div>{% endif %}
+      {% if tx.financing_deadline %}<div class="detail-row"><span>Financing</span><span>{{ tx.financing_deadline }}</span></div>{% endif %}
+      {% if tx.title_deadline %}<div class="detail-row"><span>Title</span><span>{{ tx.title_deadline }}</span></div>{% endif %}
+      {% if tx.closing_date %}
+        <div class="detail-row">
+          <span>Closing</span>
+          <span style="{% if tx.days_to_closing is not None and tx.days_to_closing < 7 %}color:var(--red-600);font-weight:600;{% endif %}">{{ tx.closing_date }}</span>
+        </div>
+      {% endif %}
+      {% if tx.possession_date %}<div class="detail-row"><span>Possession</span><span>{{ tx.possession_date }}</span></div>{% endif %}
+    </div>
+
+    <!-- Milestone flags -->
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Milestones</div>
+      {% for label, val in milestones %}
+      <div class="detail-row">
+        <span>{{ label }}</span>
+        <span>{% if val %}<i class="bi bi-check-circle-fill" style="color:var(--brand-500);"></i>{% else %}<i class="bi bi-circle" style="color:var(--border-strong);"></i>{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+        <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);">Documents</div>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ documents|length }} file{{ documents|length|pluralize }}</span>
+      </div>
+
+      {% if document_required_checklist %}
+        <div style="margin-bottom:.75rem;">
+          {% for req in document_required_checklist %}
+            <div class="detail-row">
+              <span>{{ req.label }}</span>
+              {% if req.is_present %}
+                <span style="color:var(--brand-600);font-weight:500;">{{ req.count }} uploaded</span>
+              {% else %}
+                <span style="color:var(--red-600);font-weight:500;">Missing</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'transactions:document_upload' tx.pk %}" enctype="multipart/form-data" style="margin-bottom:.75rem;">
+        {% csrf_token %}
+        <div style="display:grid;gap:.5rem;">
+          {{ document_form.category }}
+          {{ document_form.title }}
+          {{ document_form.file }}
+          {{ document_form.notes }}
+          <button type="submit" class="btn btn-primary btn-sm">Upload Document</button>
+        </div>
+      </form>
+
+      {% if documents %}
+        {% for doc in documents %}
+          <div style="padding:.5rem 0;border-top:1px solid var(--border-muted);">
+            <div style="display:flex;justify-content:space-between;gap:.5rem;">
+              <div>
+                <a href="{{ doc.file.url }}" target="_blank" style="font-size:.8125rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                  {{ doc.title }}
+                </a>
+                <div style="font-size:.75rem;color:var(--text-muted);">
+                  {{ doc.get_category_display }} · {{ doc.created_at|date:"M j, Y g:i A" }}
+                  {% if doc.uploaded_by %} · {{ doc.uploaded_by.full_name }}{% endif %}
+                </div>
+              </div>
+              <form method="post" action="{% url 'transactions:document_delete' tx.pk doc.pk %}" onsubmit="return confirm('Delete this document?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red-600);padding:.1rem .35rem;">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+            {% if doc.notes %}
+              <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.25rem;">{{ doc.notes }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div style="font-size:.8125rem;color:var(--text-muted);">No documents uploaded yet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Third parties -->
+    {% if tx.lender_name or tx.title_company or tx.closing_attorney %}
+    <div class="card" style="margin-bottom:1rem;padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Third Parties</div>
+      {% if tx.lender_name %}
+        <div style="margin-bottom:.75rem;">
+          <div style="font-size:.75rem;color:var(--text-muted);">Lender</div>
+          <div style="font-size:.875rem;font-weight:500;">{{ tx.lender_name }}</div>
+          {% if tx.lender_contact %}<div style="font-size:.8125rem;color:var(--text-secondary);">{{ tx.lender_contact }}</div>{% endif %}
+          {% if tx.lender_email %}<div style="font-size:.8125rem;"><a href="mailto:{{ tx.lender_email }}" style="color:var(--text-link);">{{ tx.lender_email }}</a></div>{% endif %}
+          {% if tx.lender_phone %}<div style="font-size:.8125rem;color:var(--text-secondary);">{{ tx.lender_phone }}</div>{% endif %}
+        </div>
+      {% endif %}
+      {% if tx.title_company %}
+        <div style="margin-bottom:.75rem;">
+          <div style="font-size:.75rem;color:var(--text-muted);">Title Company</div>
+          <div style="font-size:.875rem;font-weight:500;">{{ tx.title_company }}</div>
+          {% if tx.title_officer %}<div style="font-size:.8125rem;color:var(--text-secondary);">{{ tx.title_officer }}</div>{% endif %}
+          {% if tx.title_email %}<div style="font-size:.8125rem;"><a href="mailto:{{ tx.title_email }}" style="color:var(--text-link);">{{ tx.title_email }}</a></div>{% endif %}
+          {% if tx.title_phone %}<div style="font-size:.8125rem;color:var(--text-secondary);">{{ tx.title_phone }}</div>{% endif %}
+        </div>
+      {% endif %}
+      {% if tx.closing_attorney %}
+        <div>
+          <div style="font-size:.75rem;color:var(--text-muted);">Closing Attorney</div>
+          <div style="font-size:.875rem;font-weight:500;">{{ tx.closing_attorney }}</div>
+          {% if tx.closing_email %}<div style="font-size:.8125rem;"><a href="mailto:{{ tx.closing_email }}" style="color:var(--text-link);">{{ tx.closing_email }}</a></div>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if tx.notes %}
+    <div class="card" style="padding:1.125rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.5rem;">Internal Notes</div>
+      <div style="font-size:.875rem;white-space:pre-wrap;color:var(--text-secondary);">{{ tx.notes }}</div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Checklist item update modal -->
+<div id="itemModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1050;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:480px;padding:1.5rem;margin:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <span style="font-weight:600;">Update Checklist Item</span>
+      <button onclick="closeItemModal()" style="background:none;border:none;cursor:pointer;font-size:1.25rem;">&times;</button>
+    </div>
+    <form id="itemUpdateForm" method="post" action="">
+      {% csrf_token %}
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.8125rem;font-weight:500;display:block;margin-bottom:.25rem;">Status</label>
+        {{ item_update_form.status }}
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.8125rem;font-weight:500;display:block;margin-bottom:.25rem;">Due Date</label>
+        {{ item_update_form.due_date }}
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.8125rem;font-weight:500;display:block;margin-bottom:.25rem;">Assigned To</label>
+        {{ item_update_form.assigned_to }}
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:.8125rem;font-weight:500;display:block;margin-bottom:.25rem;">Notes</label>
+        {{ item_update_form.notes }}
+      </div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;">
+        <button type="button" onclick="closeItemModal()" class="btn btn-ghost btn-sm">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.detail-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .375rem 0; border-bottom: 1px solid var(--border-muted);
+  font-size: .8125rem; color: var(--text-secondary);
+}
+.detail-row span:first-child { color: var(--text-muted); }
+</style>
+
+<script>
+function openItemModal(itemPk, status, dueDate, assignedTo, notes) {
+  const form = document.getElementById('itemUpdateForm');
+  form.action = "{% url 'transactions:checklist_item_update' tx.pk 0 %}".replace('/0/', '/' + itemPk + '/');
+  form.querySelector('[name="status"]').value = status;
+  form.querySelector('[name="due_date"]').value = dueDate;
+  const assignedSelect = form.querySelector('[name="assigned_to"]');
+  if (assignedSelect) assignedSelect.value = assignedTo;
+  form.querySelector('[name="notes"]').value = notes;
+  const modal = document.getElementById('itemModal');
+  modal.style.display = 'flex';
+}
+function closeItemModal() {
+  document.getElementById('itemModal').style.display = 'none';
+}
+document.getElementById('itemModal').addEventListener('click', function(e) {
+  if (e.target === this) closeItemModal();
+});
+</script>
+
+{% endblock %}

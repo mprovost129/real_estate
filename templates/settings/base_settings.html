@@ -1,0 +1,74 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Sidebar nav -->
+  <div class="col-12 col-lg-3">
+    <div class="card" style="padding:.5rem 0;">
+      <nav>
+        <a href="{% url 'profile_settings' %}"
+           class="settings-nav-link {% if active_section == 'profile' %}active{% endif %}">
+          <i class="bi bi-person-circle me-2"></i> Profile
+        </a>
+        {% if org_capabilities.manage_organization_settings %}
+          <a href="{% url 'org_settings' %}"
+             class="settings-nav-link {% if active_section == 'organization' %}active{% endif %}">
+            <i class="bi bi-building me-2"></i> Organization
+          </a>
+        {% endif %}
+        {% if org_capabilities.manage_team %}
+          <a href="{% url 'team_settings' %}"
+             class="settings-nav-link {% if active_section == 'team' %}active{% endif %}">
+            <i class="bi bi-people me-2"></i> Team Members
+          </a>
+        {% endif %}
+        {% if org_capabilities.manage_organization_settings %}
+          <a href="{% url 'integrations:settings' %}"
+             class="settings-nav-link {% if active_section == 'integrations' %}active{% endif %}">
+            <i class="bi bi-plug me-2"></i> Integrations
+          </a>
+        {% endif %}
+        <div style="height:1px;background:var(--border-muted);margin:.375rem .75rem;"></div>
+        <a href="{% url 'password_change' %}"
+           class="settings-nav-link">
+          <i class="bi bi-shield-lock me-2"></i> Change Password
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="col-12 col-lg-9">
+    {% block settings_content %}{% endblock %}
+  </div>
+
+</div>
+
+<style>
+.settings-nav-link {
+  display: flex;
+  align-items: center;
+  padding: .5rem .875rem;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: background .1s, color .1s;
+}
+.settings-nav-link:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+.settings-nav-link.active {
+  color: var(--brand-600);
+  border-left-color: var(--brand-500);
+  background: var(--brand-50);
+}
+</style>
+
+{% endblock %}

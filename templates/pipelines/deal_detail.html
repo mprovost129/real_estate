@@ -1,0 +1,331 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ deal.title }}{% endblock %}
+{% block page_title %}Pipelines{% endblock %}
+
+{% block topbar_actions %}
+  {% if org_capabilities.edit_crm_data %}
+  <a href="{% url 'pipelines:deal_update' deal.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<nav style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">
+  <a href="{% url 'pipelines:board_pipeline' deal.pipeline.pk %}" style="color:var(--text-muted);">
+    {{ deal.pipeline.name }}
+  </a>
+  <span style="margin:0 .375rem;">/</span>
+  <span style="color:var(--text-primary);">{{ deal.title }}</span>
+</nav>
+
+{# Header #}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3 flex-wrap">
+      <div style="flex:1;min-width:0;">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h2 style="font-size:1.125rem;font-weight:700;color:var(--text-primary);margin:0;">
+            {{ deal.title }}
+          </h2>
+          <span class="badge"
+                style="background:{{ deal.stage.color }}22;color:{{ deal.stage.color }};
+                       border:1px solid {{ deal.stage.color }}44;">
+            {{ deal.stage.name }}
+          </span>
+          {% if deal.status == "won" %}
+            <span class="badge badge-green">Won</span>
+          {% elif deal.status == "lost" %}
+            <span class="badge badge-red">Lost</span>
+          {% endif %}
+          {% if deal.is_stale %}
+            <span class="badge badge-yellow">
+              <i class="bi bi-exclamation-triangle me-1"></i>Stale
+            </span>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-3" style="font-size:.8125rem;color:var(--text-secondary);">
+          <a href="{% url 'contacts:detail' deal.contact.pk %}" style="color:var(--text-secondary);">
+            <i class="bi bi-person me-1"></i>{{ deal.contact.full_name }}
+          </a>
+          {% if deal.value %}
+            <span><i class="bi bi-currency-dollar me-1"></i>${{ deal.value|floatformat:0 }}</span>
+          {% endif %}
+          {% if deal.assigned_to %}
+            <span><i class="bi bi-person-fill me-1"></i>{{ deal.assigned_to.full_name }}</span>
+          {% endif %}
+          <span><i class="bi bi-clock me-1"></i>{{ deal.days_in_stage }} days in stage</span>
+          {% if deal.expected_close_date %}
+            <span><i class="bi bi-calendar-check me-1"></i>Close {{ deal.expected_close_date }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  {# Left: Move stage + history #}
+  <div class="col-12 col-xl-7">
+
+    {# Move stage #}
+    {% if deal.status == "active" and org_capabilities.edit_crm_data %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-arrow-right-circle me-1" style="color:var(--brand-500);"></i>
+          Move Stage
+        </span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'pipelines:deal_move' deal.pk %}">
+          {% csrf_token %}
+          <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+              <label style="font-size:.75rem;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:.25rem;">
+                Move to stage
+              </label>
+              <select name="stage" class="input">
+                {% for stage in deal.pipeline.stages.all %}
+                  {% if stage.is_active %}
+                  <option value="{{ stage.pk }}" {% if stage.pk == deal.stage.pk %}selected{% endif %}>
+                    {{ stage.name }}{% if stage.is_won %} ✓{% endif %}{% if stage.is_lost %} ✗{% endif %}
+                  </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12 col-md-5">
+              <label style="font-size:.75rem;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:.25rem;">
+                Note (optional)
+              </label>
+              <input type="text" name="note" placeholder="Reason for move…" class="input">
+            </div>
+            <div class="col-12 col-md-2">
+              <button type="submit" class="btn btn-primary" style="width:100%;">Move</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if stage_requirements.has_any %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-list-check me-1" style="color:var(--brand-500);"></i>
+          Stage Requirements
+        </span>
+      </div>
+      <div class="card-body">
+        {% if stage_requirements.task_statuses %}
+          <div style="font-size:.75rem;font-weight:600;color:var(--text-secondary);margin-bottom:.35rem;">Tasks</div>
+          {% for item in stage_requirements.task_statuses %}
+            <div style="display:flex;justify-content:space-between;gap:.75rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+              <span style="font-size:.8125rem;color:var(--text-primary);">{{ item.title }}</span>
+              <span style="font-size:.75rem;">
+                {% if item.completed %}
+                  <span class="badge badge-green">Completed</span>
+                {% elif item.exists %}
+                  <span class="badge badge-yellow">Created</span>
+                {% else %}
+                  <span class="badge badge-gray">Missing</span>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if stage_requirements.form_statuses %}
+          <div style="font-size:.75rem;font-weight:600;color:var(--text-secondary);margin:.75rem 0 .35rem;">Forms</div>
+          {% for item in stage_requirements.form_statuses %}
+            <div style="display:flex;justify-content:space-between;gap:.75rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+              <span style="font-size:.8125rem;color:var(--text-primary);">{{ item.name }}</span>
+              <span style="font-size:.75rem;">
+                {% if item.submitted %}
+                  <span class="badge badge-green">Submitted</span>
+                {% elif item.exists %}
+                  <span class="badge badge-yellow">Not Submitted</span>
+                {% else %}
+                  <span class="badge badge-red">Missing Form</span>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if stage_requirements.automation_statuses %}
+          <div style="font-size:.75rem;font-weight:600;color:var(--text-secondary);margin:.75rem 0 .35rem;">Automation Rules</div>
+          {% for item in stage_requirements.automation_statuses %}
+            <div style="display:flex;justify-content:space-between;gap:.75rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+              <span style="font-size:.8125rem;color:var(--text-primary);">{{ item.name }}</span>
+              <span style="font-size:.75rem;">
+                {% if item.active %}
+                  <span class="badge badge-green">Active</span>
+                {% elif item.exists %}
+                  <span class="badge badge-yellow">Inactive</span>
+                {% else %}
+                  <span class="badge badge-red">Missing Rule</span>
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if deal.stage.enforce_requirements %}
+          <div style="margin-top:.75rem;font-size:.75rem;color:var(--text-muted);">
+            This stage enforces forms and automation rule requirements before entry.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Stage history #}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-clock-history me-1" style="color:var(--brand-500);"></i>
+          Stage History
+        </span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if stage_history %}
+          {% for entry in stage_history %}
+          <div class="activity-item">
+            <div style="width:1.75rem;height:1.75rem;border-radius:9999px;
+                        background:var(--bg-subtle);border:1px solid var(--border-base);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.125rem;">
+              <i class="bi bi-arrow-right" style="font-size:.625rem;color:var(--brand-500);"></i>
+            </div>
+            <div class="activity-body">
+              <div class="activity-text">
+                {% if entry.from_stage %}
+                  <span style="color:var(--text-muted);">{{ entry.from_stage.name }}</span>
+                  <i class="bi bi-arrow-right mx-1" style="font-size:.625rem;"></i>
+                {% endif %}
+                <strong>{{ entry.to_stage.name }}</strong>
+                {% if entry.note %}
+                  <span style="color:var(--text-secondary);"> — {{ entry.note }}</span>
+                {% endif %}
+              </div>
+              <div class="activity-meta">
+                {% if entry.changed_by %}{{ entry.changed_by.full_name }} · {% endif %}
+                {{ entry.changed_at|timesince }} ago
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;font-size:.8125rem;color:var(--text-muted);">
+            No history yet
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Right: Deal details #}
+  <div class="col-12 col-xl-5">
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-info-circle me-1" style="color:var(--brand-500);"></i>Deal Details
+        </span>
+        {% if org_capabilities.edit_crm_data %}
+          <a href="{% url 'pipelines:deal_update' deal.pk %}" class="btn btn-ghost btn-sm">
+            <i class="bi bi-pencil"></i>
+          </a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% if deal.notes %}
+        <div style="font-size:.8125rem;color:var(--text-secondary);margin-bottom:.75rem;
+                    padding:.625rem;background:var(--bg-subtle);border-radius:var(--radius-md);">
+          {{ deal.notes }}
+        </div>
+        {% endif %}
+
+        {% if deal.value %}
+        <div style="display:flex;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+          <i class="bi bi-currency-dollar" style="color:var(--text-muted);width:1rem;text-align:center;"></i>
+          <span style="font-size:.75rem;color:var(--text-muted);width:7rem;">Value</span>
+          <span style="font-size:.8125rem;color:var(--text-primary);font-weight:600;">${{ deal.value|floatformat:0 }}</span>
+        </div>
+        {% endif %}
+
+        {% if deal.expected_close_date %}
+        <div style="display:flex;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+          <i class="bi bi-calendar3" style="color:var(--text-muted);width:1rem;text-align:center;"></i>
+          <span style="font-size:.75rem;color:var(--text-muted);width:7rem;">Expected Close</span>
+          <span style="font-size:.8125rem;color:var(--text-primary);">{{ deal.expected_close_date }}</span>
+        </div>
+        {% endif %}
+
+        {% if deal.actual_close_date %}
+        <div style="display:flex;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+          <i class="bi bi-calendar-check-fill" style="color:var(--color-success);width:1rem;text-align:center;"></i>
+          <span style="font-size:.75rem;color:var(--text-muted);width:7rem;">Closed</span>
+          <span style="font-size:.8125rem;color:var(--color-success);font-weight:600;">{{ deal.actual_close_date }}</span>
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+          <i class="bi bi-clock" style="color:var(--text-muted);width:1rem;text-align:center;"></i>
+          <span style="font-size:.75rem;color:var(--text-muted);width:7rem;">In Stage</span>
+          <span style="font-size:.8125rem;color:var(--text-primary);">{{ deal.days_in_stage }} days</span>
+        </div>
+
+        <div style="display:flex;gap:.5rem;padding:.3rem 0;">
+          <i class="bi bi-calendar-plus" style="color:var(--text-muted);width:1rem;text-align:center;"></i>
+          <span style="font-size:.75rem;color:var(--text-muted);width:7rem;">Created</span>
+          <span style="font-size:.8125rem;color:var(--text-primary);">{{ deal.created_at|date:"M d, Y" }}</span>
+        </div>
+      </div>
+    </div>
+
+    {# Open tasks #}
+    {% if tasks %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-check2-square me-1" style="color:var(--brand-500);"></i>Open Tasks
+        </span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for task in tasks %}
+        <div class="task-item {% if task.is_overdue %}task-overdue{% endif %}">
+          <div class="priority-dot {{ task.priority }}"></div>
+          <div>
+            <div class="task-title">{{ task.title }}</div>
+            <div class="task-meta">Due {{ task.due_date }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Lost reason #}
+    {% if deal.status == "lost" and deal.lost_reason %}
+    <div class="card" style="border-color:var(--color-danger-border);">
+      <div class="card-header" style="background:var(--color-danger-bg);">
+        <span class="card-title" style="color:var(--color-danger);">
+          <i class="bi bi-x-circle me-1"></i>Lost Reason
+        </span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.8125rem;color:var(--text-secondary);margin:0;">{{ deal.lost_reason }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

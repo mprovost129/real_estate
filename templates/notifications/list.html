@@ -1,0 +1,133 @@
+{% extends "base_app.html" %}
+
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block topbar_actions %}
+  {% if unread_count %}
+  <form method="post" action="{% url 'notifications:mark_all_read' %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-ghost btn-sm">
+      <i class="bi bi-check2-all me-1"></i>Mark all read
+    </button>
+  </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# ── Filter tabs ── #}
+<div class="d-flex gap-2 mb-3" style="font-size:.8125rem;">
+  <a href="?show=all"
+     class="btn btn-sm {% if show == 'all' %}btn-secondary{% else %}btn-ghost{% endif %}">
+    All
+  </a>
+  <a href="?show=unread"
+     class="btn btn-sm {% if show == 'unread' %}btn-secondary{% else %}btn-ghost{% endif %}">
+    Unread
+    {% if unread_count %}
+      <span style="margin-left:.25rem;background:var(--red-500,#ef4444);color:#fff;
+                   border-radius:9999px;font-size:.625rem;font-weight:700;
+                   padding:.1rem .35rem;">{{ unread_count }}</span>
+    {% endif %}
+  </a>
+</div>
+
+<div class="card">
+
+  {% if notifications %}
+
+  {% for notif in notifications %}
+  <div style="display:flex;align-items:flex-start;gap:.875rem;
+              padding:.875rem 1.25rem;
+              border-bottom:1px solid var(--border-subtle);
+              {% if not notif.is_read %}background:var(--brand-50,#eef2ff);{% endif %}
+              transition:background .15s;"
+       onmouseover="this.style.background='var(--bg-subtle)'"
+       onmouseout="this.style.background='{% if not notif.is_read %}var(--brand-50,#eef2ff){% endif %}'">
+
+    {# Icon bubble #}
+    <div style="width:2.25rem;height:2.25rem;border-radius:9999px;flex-shrink:0;
+                background:{{ notif.color }}18;
+                display:flex;align-items:center;justify-content:center;
+                margin-top:.1rem;">
+      <i class="bi {{ notif.icon }}" style="font-size:.875rem;color:{{ notif.color }};"></i>
+    </div>
+
+    {# Content #}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:.875rem;font-weight:{% if not notif.is_read %}600{% else %}500{% endif %};
+                  color:var(--text-primary);margin-bottom:.125rem;">
+        {% if notif.link %}
+          <a href="{% url 'notifications:mark_read' notif.pk %}"
+             style="color:inherit;text-decoration:none;"
+             onclick="submitReadForm('form-{{ notif.pk }}'); return false;">
+            {{ notif.title }}
+          </a>
+        {% else %}
+          {{ notif.title }}
+        {% endif %}
+      </div>
+      {% if notif.body %}
+        <div style="font-size:.8125rem;color:var(--text-muted);">{{ notif.body }}</div>
+      {% endif %}
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;">
+        {{ notif.created_at|timesince }} ago
+        {% if notif.contact %}
+          · <a href="{% url 'contacts:detail' notif.contact.pk %}"
+               style="color:var(--text-muted);">{{ notif.contact.full_name }}</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Actions #}
+    <div style="display:flex;gap:.25rem;flex-shrink:0;align-items:center;">
+      {% if not notif.is_read %}
+      <form method="post" action="{% url 'notifications:mark_read' notif.pk %}"
+            id="form-{{ notif.pk }}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read"
+                style="padding:.2rem .4rem;">
+          <i class="bi bi-check2" style="font-size:.875rem;color:var(--brand-500);"></i>
+        </button>
+      </form>
+      {% else %}
+        <span style="width:.5rem;height:.5rem;border-radius:9999px;
+                     display:inline-block;background:transparent;"></span>
+      {% endif %}
+      <form method="post" action="{% url 'notifications:delete' notif.pk %}"
+            style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm" title="Dismiss"
+                style="padding:.2rem .4rem;">
+          <i class="bi bi-x" style="font-size:1rem;color:var(--text-muted);"></i>
+        </button>
+      </form>
+    </div>
+
+  </div>
+  {% endfor %}
+
+  {% else %}
+
+  <div style="padding:4rem 1.5rem;text-align:center;">
+    <i class="bi bi-bell-slash" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem;"></i>
+    <p style="font-size:.9375rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">
+      {% if show == "unread" %}No unread notifications{% else %}No notifications{% endif %}
+    </p>
+    <p style="font-size:.8125rem;color:var(--text-muted);">
+      You're all caught up.
+    </p>
+  </div>
+
+  {% endif %}
+
+</div>
+
+<script>
+function submitReadForm(formId) {
+  document.getElementById(formId).submit();
+}
+</script>
+
+{% endblock %}

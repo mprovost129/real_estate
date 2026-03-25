@@ -1,0 +1,279 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ oh.display_title }}{% endblock %}
+{% block page_title %}Open House{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'open_houses:update' oh.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <a href="{% url 'open_houses:list' %}" class="btn btn-ghost btn-sm">← Open Houses</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+  <!-- Left: detail + visitors -->
+  <div class="col-12 col-xl-8">
+
+    <!-- Header card -->
+    <div class="card mb-3">
+      <div class="card-body" style="padding:1.25rem;">
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+          <div>
+            <h2 style="font-size:1.125rem;font-weight:700;margin:0 0 .25rem;">{{ oh.display_title }}</h2>
+            <div style="color:var(--text-secondary);font-size:.875rem;">{{ oh.display_address }}</div>
+          </div>
+          {% if oh.status == "active" %}
+            <span class="badge badge-green">Active</span>
+          {% elif oh.status == "completed" %}
+            <span class="badge badge-blue">Completed</span>
+          {% elif oh.status == "cancelled" %}
+            <span class="badge badge-red">Cancelled</span>
+          {% else %}
+            <span class="badge badge-gray">Scheduled</span>
+          {% endif %}
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:1.25rem;font-size:.8125rem;color:var(--text-secondary);padding-top:.75rem;border-top:1px solid var(--border-muted);">
+          <div><i class="bi bi-calendar3 me-1" style="color:var(--brand-500);"></i>{{ oh.date }}</div>
+          <div><i class="bi bi-clock me-1" style="color:var(--brand-500);"></i>{{ oh.start_time|time:"g:i A" }} – {{ oh.end_time|time:"g:i A" }}</div>
+          <div><i class="bi bi-tag me-1" style="color:var(--brand-500);"></i>{{ oh.get_event_type_display }}</div>
+          {% if oh.host %}<div><i class="bi bi-person me-1" style="color:var(--brand-500);"></i>{{ oh.host.full_name }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Visitor stats strip -->
+    <div class="row g-2 mb-3">
+      <div class="col-3">
+        <div class="stat-card" style="padding:.75rem;">
+          <div class="stat-label" style="font-size:.7rem;">Total</div>
+          <div class="stat-value" style="font-size:1.5rem;">{{ total_visitors }}</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="stat-card" style="padding:.75rem;">
+          <div class="stat-label" style="font-size:.7rem;">Buyers</div>
+          <div class="stat-value" style="font-size:1.5rem;">{{ buyers }}</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="stat-card" style="padding:.75rem;">
+          <div class="stat-label" style="font-size:.7rem;">Pre-Approved</div>
+          <div class="stat-value" style="font-size:1.5rem;color:var(--color-success);">{{ pre_approved }}</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="stat-card" style="padding:.75rem;">
+          <div class="stat-label" style="font-size:.7rem;">Need Follow-Up</div>
+          <div class="stat-value" style="font-size:1.5rem;{% if not_followed_up %}color:var(--color-danger);{% endif %}">{{ not_followed_up }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visitor list -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-people me-1" style="color:var(--brand-500);"></i> Visitors</span>
+        {% if visitors %}
+        <a href="{% url 'open_houses:export' oh.pk %}" class="btn btn-ghost btn-sm" style="font-size:.75rem;">
+          <i class="bi bi-download me-1"></i> Export CSV
+        </a>
+        {% endif %}
+      </div>
+
+      {% if visitors %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border-muted);background:var(--bg-subtle);">
+              <th style="padding:.4rem .75rem;text-align:left;font-weight:600;color:var(--text-secondary);">Name</th>
+              <th style="padding:.4rem .5rem;font-weight:600;color:var(--text-secondary);">Contact</th>
+              <th style="padding:.4rem .5rem;font-weight:600;color:var(--text-secondary);">Type</th>
+              <th style="padding:.4rem .5rem;font-weight:600;color:var(--text-secondary);">Pre-Appr.</th>
+              <th style="padding:.4rem .5rem;font-weight:600;color:var(--text-secondary);">CRM</th>
+              <th style="padding:.4rem .5rem;font-weight:600;color:var(--text-secondary);">Followed Up</th>
+              <th style="padding:.4rem .5rem;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in visitors %}
+            <tr style="border-bottom:1px solid var(--border-muted);">
+              <td style="padding:.5rem .75rem;">
+                <div style="font-weight:500;">{{ v.full_name }}</div>
+                <div style="color:var(--text-muted);font-size:.75rem;">
+                  {% if v.email %}{{ v.email }}{% endif %}
+                  {% if v.email and v.phone %} · {% endif %}
+                  {% if v.phone %}{{ v.phone }}{% endif %}
+                </div>
+              </td>
+              <td style="padding:.5rem .5rem;">
+                {% if v.contact %}
+                  <a href="{% url 'contacts:detail' v.contact.pk %}"
+                     style="color:var(--text-link);font-size:.75rem;">{{ v.contact.full_name }}</a>
+                {% else %}
+                  <span style="color:var(--text-muted);font-size:.75rem;">—</span>
+                {% endif %}
+              </td>
+              <td style="padding:.5rem .5rem;">
+                <span class="badge badge-gray">{{ v.get_visitor_type_display }}</span>
+              </td>
+              <td style="padding:.5rem .5rem;text-align:center;">
+                {% if v.is_pre_approved %}
+                  <i class="bi bi-check-circle-fill" style="color:var(--color-success);"></i>
+                  {% if v.pre_approval_amount %}
+                    <div style="font-size:.7rem;color:var(--text-muted);">${{ v.pre_approval_amount|floatformat:"0" }}</div>
+                  {% endif %}
+                {% else %}
+                  <span style="color:var(--text-muted);">—</span>
+                {% endif %}
+              </td>
+              <td style="padding:.5rem .5rem;">
+                {% if not v.contact %}
+                  <form method="post" action="{% url 'open_houses:convert_visitor' oh.pk v.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.2rem .4rem;" title="Create contact">
+                      <i class="bi bi-person-plus"></i> Add
+                    </button>
+                  </form>
+                {% else %}
+                  <span class="badge badge-green" style="font-size:.7rem;">Linked</span>
+                {% endif %}
+              </td>
+              <td style="padding:.5rem .5rem;">
+                {% if v.followed_up %}
+                  <span style="color:var(--color-success);font-size:.8125rem;">
+                    <i class="bi bi-check-lg"></i> Done
+                  </span>
+                {% else %}
+                  <form method="post" action="{% url 'open_houses:mark_followed_up' oh.pk v.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.2rem .4rem;">
+                      Mark done
+                    </button>
+                  </form>
+                {% endif %}
+              </td>
+              <td style="padding:.5rem .5rem;"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+        <i class="bi bi-people" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+        No visitors yet. Use the sign-in link or add them manually below.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Add visitor manually -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Add visitor manually</span>
+      </div>
+      <div class="card-body" style="padding:1.25rem;">
+        <form method="post" action="{% url 'open_houses:add_visitor' oh.pk %}" novalidate>
+          {% csrf_token %}
+          <div class="row g-2 mb-2">
+            <div class="col-4">
+              <label class="form-label">First name *</label>
+              {{ visitor_form.first_name }}
+            </div>
+            <div class="col-4">
+              <label class="form-label">Last name</label>
+              {{ visitor_form.last_name }}
+            </div>
+            <div class="col-4">
+              <label class="form-label">Type</label>
+              {{ visitor_form.visitor_type }}
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-5">
+              <label class="form-label">Email</label>
+              {{ visitor_form.email }}
+            </div>
+            <div class="col-4">
+              <label class="form-label">Phone</label>
+              {{ visitor_form.phone }}
+            </div>
+            <div class="col-3 d-flex align-items-end">
+              <label style="display:flex;align-items:center;gap:.375rem;font-size:.8125rem;cursor:pointer;padding-bottom:.25rem;">
+                {{ visitor_form.is_pre_approved }} Pre-approved?
+              </label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-person-plus me-1"></i> Add visitor
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: actions + QR sign-in -->
+  <div class="col-12 col-xl-4">
+
+    <!-- Sign-in link card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-qr-code me-1"></i> Sign-In Link</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;">
+        <p style="font-size:.8125rem;color:var(--text-secondary);margin-bottom:.75rem;">
+          Share this link or print as a QR code. Visitors sign in without needing an account.
+        </p>
+        <div style="font-family:monospace;font-size:.75rem;background:var(--bg-subtle);
+                    border:1px solid var(--border-muted);border-radius:.375rem;
+                    padding:.5rem .75rem;word-break:break-all;color:var(--text-secondary);margin-bottom:.75rem;">
+          {{ sign_in_url }}
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button onclick="navigator.clipboard.writeText('{{ sign_in_url }}');this.textContent='Copied!';"
+                  class="btn btn-secondary btn-sm">
+            <i class="bi bi-clipboard"></i> Copy link
+          </button>
+          <a href="{{ sign_in_url }}" target="_blank" class="btn btn-ghost btn-sm">
+            <i class="bi bi-box-arrow-up-right"></i> Preview
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    {% if oh.notes %}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">Notes</span></div>
+      <div class="card-body" style="padding:.75rem 1.25rem;font-size:.8125rem;color:var(--text-secondary);">
+        {{ oh.notes }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Danger zone -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--color-danger);">Danger zone</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+        <a href="{% url 'open_houses:delete' oh.pk %}" class="btn btn-sm"
+           style="background:var(--color-danger-bg);color:var(--color-danger);border:1px solid var(--color-danger);">
+          <i class="bi bi-trash3"></i> Delete
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+.form-label { display:block;font-size:.8125rem;font-weight:500;color:var(--text-secondary);margin-bottom:.25rem; }
+</style>
+
+{% endblock %}

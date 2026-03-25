@@ -1,0 +1,342 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'contacts:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Add Contact
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================
+     Stat cards
+     ================================================================ -->
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Contacts</div>
+          <div class="stat-value">{{ contact_count|default:"0" }}</div>
+          <div class="stat-sub">in your database</div>
+        </div>
+        <div class="stat-icon" style="background:var(--brand-50);">
+          <i class="bi bi-people-fill" style="color:var(--brand-500);font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'transactions:list' %}" style="text-decoration:none;">
+    <div class="stat-card">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Active Transactions</div>
+          <div class="stat-value">{{ active_tx_count|default:"0" }}</div>
+          <div class="stat-sub">in progress</div>
+        </div>
+        <div class="stat-icon" style="background:#eff6ff;">
+          <i class="bi bi-file-earmark-text-fill" style="color:#2563eb;font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+    </a>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Due Today</div>
+          <div class="stat-value">{{ tasks_today|default:"0" }}</div>
+          <div class="stat-sub">tasks assigned to you</div>
+        </div>
+        <div class="stat-icon" style="background:#f0fdf4;">
+          <i class="bi bi-check2-circle" style="color:#16a34a;font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="stat-card {% if overdue_task_count %}border-danger{% endif %}">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Overdue</div>
+          <div class="stat-value {% if overdue_task_count %}text-danger{% endif %}">
+            {{ overdue_task_count|default:"0" }}
+          </div>
+          <div class="stat-sub">tasks need attention</div>
+        </div>
+        <div class="stat-icon" style="background:var(--color-danger-bg);">
+          <i class="bi bi-exclamation-triangle-fill" style="color:var(--color-danger);font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================================================================
+     Main 2-column layout
+     ================================================================ -->
+<div class="row g-3 mb-4">
+
+  <!-- Left: Today's tasks + Overdue -->
+  <div class="col-12 col-xl-5">
+
+    <!-- Today's tasks -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-check2-square me-1" style="color:var(--brand-500);"></i>
+          Today's Tasks
+        </span>
+        <a href="#" class="btn btn-ghost btn-sm" style="font-size:.75rem;">View all</a>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if task_list %}
+          {% for task in task_list %}
+          <div class="task-item">
+            <div class="priority-dot {{ task.priority }}"></div>
+            <div class="task-check" role="checkbox" aria-label="Complete task"></div>
+            <div class="flex-1 min-w-0">
+              <div class="task-title truncate">{{ task.title }}</div>
+              <div class="task-meta">
+                {{ task.get_task_type_display }}
+                {% if task.contact %} · <a href="#" style="color:var(--text-link);">{{ task.contact.full_name }}</a>{% endif %}
+                {% if task.due_time %} · {{ task.due_time|time:"g:i A" }}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-check2-all" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No tasks due today
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Overdue tasks -->
+    {% if overdue_tasks %}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--color-danger);">
+          <i class="bi bi-exclamation-circle-fill me-1"></i>
+          Overdue
+        </span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for task in overdue_tasks %}
+        <div class="task-item task-overdue">
+          <div class="priority-dot urgent"></div>
+          <div class="task-check" role="checkbox"></div>
+          <div class="flex-1 min-w-0">
+            <div class="task-title truncate">{{ task.title }}</div>
+            <div class="task-meta">
+              Due {{ task.due_date }}
+              {% if task.contact %} · {{ task.contact.full_name }}{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Right: Recent activity -->
+  <div class="col-12 col-xl-4">
+    <div class="card" style="height:100%;">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-activity me-1" style="color:var(--brand-500);"></i>
+          Recent Activity
+        </span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;overflow-y:auto;max-height:480px;">
+        {% if recent_activity %}
+          {% for note in recent_activity %}
+          <div class="activity-item">
+            <div class="activity-dot"></div>
+            <div class="activity-body">
+              <div class="activity-text">
+                <strong>{{ note.contact.full_name }}</strong>
+                — {{ note.get_note_type_display }}
+              </div>
+              {% if note.body %}
+              <div class="activity-text" style="color:var(--text-secondary);margin-top:.125rem;">
+                {{ note.body|truncatechars:80 }}
+              </div>
+              {% endif %}
+              <div class="activity-meta">
+                {% if note.author %}{{ note.author.full_name }} · {% endif %}
+                {{ note.created_at|timesince }} ago
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-chat-dots" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No activity yet
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline summary -->
+  <div class="col-12 col-xl-3">
+    <div class="card" style="height:100%;">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-funnel me-1" style="color:var(--brand-500);"></i>
+          Pipelines
+        </span>
+      </div>
+      <div class="card-body" style="padding:.5rem 0;">
+        {% if pipeline_summaries %}
+          {% for summary in pipeline_summaries %}
+          <div class="pipeline-card {% if not forloop.last %}border-bottom{% endif %}">
+            <div class="pipeline-name">
+              {{ summary.pipeline.name }}
+              <span class="badge badge-gray ms-1">{{ summary.total }}</span>
+            </div>
+            {% for item in summary.stages %}
+            <div class="stage-bar-row">
+              <span class="stage-bar-label" title="{{ item.stage.name }}">{{ item.stage.name }}</span>
+              <div class="stage-bar-track">
+                <div class="stage-bar-fill"
+                     style="width:{% if summary.total %}{% widthratio item.count summary.total 100 %}%{% else %}0%{% endif %};background:{{ item.stage.color }};"></div>
+              </div>
+              <span class="stage-bar-count">{{ item.count }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-funnel" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No active deals yet
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ================================================================
+     Transaction deadlines + Open houses row
+     ================================================================ -->
+<div class="row g-3" style="margin-top:0;">
+
+  <!-- Transaction Deadlines -->
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-file-earmark-text me-1" style="color:var(--brand-500);"></i>
+          Transaction Deadlines
+        </span>
+        <a href="{% url 'transactions:list' %}" class="btn btn-ghost btn-sm" style="font-size:.75rem;">View all</a>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if tx_deadlines %}
+          {% for item in tx_deadlines %}
+          <div style="padding:.625rem 0;border-bottom:1px solid var(--border-muted);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;">
+              <a href="{% url 'transactions:detail' item.tx.pk %}"
+                 style="font-weight:600;font-size:.875rem;color:var(--text-primary);text-decoration:none;">
+                {{ item.tx.display_address }}
+              </a>
+              {% if item.tx.closing_date %}
+                <span style="font-size:.75rem;color:var(--text-muted);">
+                  Closing: {{ item.tx.closing_date }}
+                  {% if item.tx.days_to_closing is not None %}
+                    {% if item.tx.days_to_closing <= 7 %}
+                      <span style="color:var(--red-600);font-weight:600;">({{ item.tx.days_to_closing }}d)</span>
+                    {% else %}
+                      ({{ item.tx.days_to_closing }}d)
+                    {% endif %}
+                  {% endif %}
+                </span>
+              {% endif %}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.375rem;">
+              {% for label, date in item.overdue %}
+                <span style="font-size:.75rem;background:var(--red-50,#fef2f2);color:var(--red-700,#b91c1c);padding:.125rem .375rem;border-radius:4px;">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ label }}: {{ date }}
+                </span>
+              {% endfor %}
+              {% for label, date in item.upcoming %}
+                <span style="font-size:.75rem;background:var(--brand-50,#eff6ff);color:var(--brand-700,#1d4ed8);padding:.125rem .375rem;border-radius:4px;">
+                  {{ label }}: {{ date }}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-calendar-check" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No upcoming transaction deadlines
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Open Houses -->
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-house-heart me-1" style="color:var(--brand-500);"></i>
+          Open Houses This Week
+        </span>
+        <a href="{% url 'open_houses:list' %}" class="btn btn-ghost btn-sm" style="font-size:.75rem;">View all</a>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if upcoming_open_houses %}
+          {% for oh in upcoming_open_houses %}
+          <div style="padding:.625rem 0;border-bottom:1px solid var(--border-muted);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <a href="{% url 'open_houses:detail' oh.pk %}"
+                 style="font-weight:600;font-size:.875rem;color:var(--text-primary);text-decoration:none;">
+                {{ oh.display_title }}
+              </a>
+              <span style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;margin-left:.5rem;">
+                {{ oh.visitor_count }} visitor{{ oh.visitor_count|pluralize }}
+              </span>
+            </div>
+            <div style="font-size:.8125rem;color:var(--text-secondary);margin-top:.125rem;">
+              <i class="bi bi-calendar3 me-1"></i>{{ oh.date }}
+              &nbsp;·&nbsp;{{ oh.start_time|time:"g:i A" }} – {{ oh.end_time|time:"g:i A" }}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-house-heart" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No open houses this week.
+            <a href="{% url 'open_houses:create' %}" style="color:var(--text-link);">Schedule one.</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

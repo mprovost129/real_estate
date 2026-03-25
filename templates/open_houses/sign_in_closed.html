@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Open House Cancelled{% endblock %}
+
+{% block body %}
+<div style="min-height:100vh;background:var(--bg-base);display:flex;align-items:center;justify-content:center;padding:2rem 1rem;">
+  <div style="width:100%;max-width:420px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:1rem;">🚫</div>
+    <h1 style="font-size:1.375rem;font-weight:700;color:var(--text-primary);margin:0 0 .5rem;">
+      This open house has been cancelled.
+    </h1>
+    <p style="color:var(--text-secondary);">{{ oh.display_title }}</p>
+  </div>
+</div>
+{% endblock %}

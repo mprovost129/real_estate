@@ -1,0 +1,263 @@
+{% extends "base_app.html" %}
+
+{% block title %}Pipelines{% endblock %}
+{% block page_title %}Pipelines{% endblock %}
+
+{% block topbar_actions %}
+  {% if current_pipeline and org_capabilities.edit_crm_data %}
+  <a href="{% url 'pipelines:deal_create' %}?pipeline={{ current_pipeline.pk }}"
+     class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Add Deal
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .board-tabs {
+    display: flex;
+    gap: .25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-base);
+    padding-bottom: 0;
+    overflow-x: auto;
+  }
+  .board-tab {
+    padding: .5rem 1rem;
+    font-size: .8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  .board-tab:hover { color: var(--text-primary); }
+  .board-tab.active {
+    color: var(--brand-500);
+    border-bottom-color: var(--brand-500);
+    font-weight: 600;
+  }
+
+  /* Kanban board */
+  .kanban-board {
+    display: flex;
+    gap: .75rem;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+    align-items: flex-start;
+    min-height: 60vh;
+  }
+  .kanban-col {
+    flex-shrink: 0;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-base);
+    overflow: hidden;
+  }
+  .kanban-col-header {
+    padding: .75rem 1rem .625rem;
+    border-bottom: 1px solid var(--border-base);
+    background: var(--bg-surface);
+  }
+  .kanban-col-name {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .kanban-col-indicator {
+    width: .5rem; height: .5rem;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+  .kanban-col-meta {
+    font-size: .6875rem;
+    color: var(--text-muted);
+    margin-top: .125rem;
+    display: flex;
+    gap: .75rem;
+  }
+  .kanban-cards {
+    padding: .5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .375rem;
+    flex: 1;
+    min-height: 80px;
+  }
+  .kanban-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-base);
+    border-radius: var(--radius-md);
+    padding: .75rem;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .15s;
+    text-decoration: none;
+    display: block;
+    color: inherit;
+  }
+  .kanban-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--brand-400);
+    color: inherit;
+    text-decoration: none;
+  }
+  .kanban-card-name {
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: .25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kanban-card-meta {
+    font-size: .6875rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .375rem;
+    align-items: center;
+  }
+  .kanban-card-stale {
+    border-left: 3px solid var(--color-warning);
+  }
+  .kanban-card-won  { border-left: 3px solid var(--color-success); }
+  .kanban-card-lost { border-left: 3px solid var(--color-danger); opacity: .7; }
+
+  .kanban-add-btn {
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+    width: 100%;
+    padding: .5rem .75rem;
+    font-size: .75rem;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-top: 1px solid var(--border-subtle);
+    text-decoration: none;
+    transition: background .1s, color .1s;
+  }
+  .kanban-add-btn:hover {
+    background: var(--bg-surface);
+    color: var(--brand-500);
+    text-decoration: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not current_pipeline %}
+  <div style="text-align:center;padding:4rem 1rem;">
+    <i class="bi bi-funnel" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem;"></i>
+    <p style="font-size:.9375rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">No pipelines yet</p>
+    <p style="font-size:.8125rem;color:var(--text-muted);">Pipelines are created automatically when you set up your organization.</p>
+  </div>
+{% else %}
+
+  {# Pipeline tabs #}
+  <div class="board-tabs">
+    {% for p in pipelines %}
+      <a href="{% url 'pipelines:board_pipeline' p.pk %}"
+         class="board-tab {% if p.pk == current_pipeline.pk %}active{% endif %}">
+        {% if p.pipeline_type == "lead" %}<i class="bi bi-lightning-charge me-1"></i>{% endif %}
+        {% if p.pipeline_type == "buyer" %}<i class="bi bi-house me-1"></i>{% endif %}
+        {% if p.pipeline_type == "seller" %}<i class="bi bi-sign-turn-right me-1"></i>{% endif %}
+        {% if p.pipeline_type == "recruiting" %}<i class="bi bi-person-plus me-1"></i>{% endif %}
+        {% if p.pipeline_type == "custom" %}<i class="bi bi-sliders me-1"></i>{% endif %}
+        {{ p.name }}
+      </a>
+    {% endfor %}
+  </div>
+
+  {# Kanban board #}
+  <div class="kanban-board">
+    {% for col in columns %}
+    <div class="kanban-col">
+
+      {# Column header #}
+      <div class="kanban-col-header">
+        <div class="kanban-col-name">
+          <span class="kanban-col-indicator" style="background:{{ col.stage.color }};"></span>
+          {{ col.stage.name }}
+          <span style="margin-left:auto;font-size:.6875rem;font-weight:700;
+                       background:var(--bg-subtle);color:var(--text-muted);
+                       border-radius:9999px;padding:.1rem .5rem;">
+            {{ col.count }}
+          </span>
+        </div>
+        <div class="kanban-col-meta">
+          <span>{{ col.stage.probability }}% probability</span>
+          {% if col.total_value %}
+            <span>${{ col.total_value|floatformat:0 }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Deal cards #}
+      <div class="kanban-cards">
+        {% for deal in col.deals %}
+        <a href="{% url 'pipelines:deal_detail' deal.pk %}"
+           class="kanban-card {% if deal.is_stale %}kanban-card-stale{% endif %}">
+
+          <div class="kanban-card-name">{{ deal.contact.full_name }}</div>
+          {% if deal.title != deal.contact.full_name %}
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-bottom:.25rem;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ deal.title }}
+            </div>
+          {% endif %}
+
+          <div class="kanban-card-meta">
+            {% if deal.value %}
+              <span style="font-weight:600;color:var(--text-primary);">${{ deal.value|floatformat:0 }}</span>
+            {% endif %}
+            <span>
+              <i class="bi bi-clock me-1"></i>{{ deal.days_in_stage }}d
+              {% if deal.is_stale %}
+                <i class="bi bi-exclamation-triangle-fill ms-1" style="color:var(--color-warning);"></i>
+              {% endif %}
+            </span>
+            {% if deal.assigned_to %}
+              <span title="{{ deal.assigned_to.full_name }}">
+                <i class="bi bi-person me-1"></i>{{ deal.assigned_to.first_name }}
+              </span>
+            {% endif %}
+            {% if deal.expected_close_date %}
+              <span><i class="bi bi-calendar3 me-1"></i>{{ deal.expected_close_date }}</span>
+            {% endif %}
+          </div>
+
+        </a>
+        {% empty %}
+        <div style="padding:.75rem .5rem;text-align:center;font-size:.75rem;color:var(--text-muted);">
+          No deals
+        </div>
+        {% endfor %}
+      </div>
+
+      {# Add deal to this stage #}
+      {% if org_capabilities.edit_crm_data %}
+        <a href="{% url 'pipelines:deal_create' %}?pipeline={{ current_pipeline.pk }}&stage={{ col.stage.pk }}"
+           class="kanban-add-btn">
+          <i class="bi bi-plus"></i> Add deal
+        </a>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,190 @@
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Iterable
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode
+from urllib.request import Request, urlopen
+
+from integrations.models import IntegrationConnection
+from integrations.services.oauth import get_valid_access_token, refresh_connection_tokens
+
+
+@dataclass
+class CalendarDescriptor:
+    remote_id: str
+    name: str
+    is_primary: bool = False
+
+
+@dataclass
+class CalendarEventPayload:
+    title: str
+    start_at: datetime
+    end_at: datetime
+    description: str = ""
+    location: str = ""
+    all_day: bool = False
+
+
+class BaseCalendarProvider:
+    """Shared interface for calendar providers."""
+
+    def __init__(self, connection: IntegrationConnection):
+        self.connection = connection
+
+    def list_calendars(self) -> Iterable[CalendarDescriptor]:
+        raise NotImplementedError
+
+    def upsert_event(
+        self,
+        payload: CalendarEventPayload,
+        remote_calendar_id: str,
+        remote_event_id: str | None = None,
+    ) -> str:
+        raise NotImplementedError
+
+    def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
+        raise NotImplementedError
+
+
+class ConsoleCalendarProvider(BaseCalendarProvider):
+    """
+    Safe no-op adapter that lets us exercise sync orchestration
+    before wiring real provider APIs.
+    """
+
+    def list_calendars(self) -> Iterable[CalendarDescriptor]:
+        return [CalendarDescriptor(remote_id="primary", name="Primary", is_primary=True)]
+
+    def upsert_event(
+        self,
+        payload: CalendarEventPayload,
+        remote_calendar_id: str,
+        remote_event_id: str | None = None,
+    ) -> str:
+        return remote_event_id or f"stub-{int(payload.start_at.timestamp())}"
+
+    def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
+        return None
+
+
+class GoogleCalendarProvider(BaseCalendarProvider):
+    api_base = "https://www.googleapis.com/calendar/v3"
+
+    def _request(self, method: str, path: str, params=None, payload=None, retry_on_auth=True):
+        token = get_valid_access_token(self.connection)
+        url = f"{self.api_base}{path}"
+        if params:
+            url = f"{url}?{urlencode(params)}"
+
+        data = None
+        headers = {"Authorization": f"Bearer {token}"}
+        if payload is not None:
+            data = json.dumps(payload).encode("utf-8")
+            headers["Content-Type"] = "application/json"
+
+        req = Request(url, data=data, headers=headers, method=method)
+        try:
+            with urlopen(req, timeout=30) as resp:
+                body = resp.read().decode("utf-8")
+                if not body:
+                    return {}
+                return json.loads(body)
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="ignore")
+            if exc.code == 401 and retry_on_auth:
+                # Token may be expired; refresh and retry once.
+                refresh_connection_tokens(self.connection)
+                return self._request(method, path, params=params, payload=payload, retry_on_auth=False)
+            raise ValueError(f"Google Calendar API error ({exc.code}): {body}") from exc
+        except URLError as exc:
+            raise ValueError(f"Google Calendar API connection failed: {exc}") from exc
+
+    def _event_payload(self, payload: CalendarEventPayload):
+        data = {
+            "summary": payload.title,
+            "description": payload.description,
+            "location": payload.location,
+        }
+        if payload.all_day:
+            data["start"] = {"date": payload.start_at.date().isoformat()}
+            data["end"] = {"date": payload.end_at.date().isoformat()}
+        else:
+            data["start"] = {"dateTime": payload.start_at.isoformat()}
+            data["end"] = {"dateTime": payload.end_at.isoformat()}
+        return data
+
+    def list_calendars(self) -> Iterable[CalendarDescriptor]:
+        data = self._request("GET", "/users/me/calendarList")
+        rows = []
+        for item in data.get("items", []):
+            rows.append(
+                CalendarDescriptor(
+                    remote_id=item.get("id", ""),
+                    name=item.get("summary", item.get("id", "Calendar")),
+                    is_primary=bool(item.get("primary")),
+                )
+            )
+        return rows
+
+    def upsert_event(
+        self,
+        payload: CalendarEventPayload,
+        remote_calendar_id: str,
+        remote_event_id: str | None = None,
+    ) -> str:
+        calendar_id = quote(remote_calendar_id, safe="")
+        body = self._event_payload(payload)
+
+        if remote_event_id:
+            event_id = quote(remote_event_id, safe="")
+            data = self._request(
+                "PUT",
+                f"/calendars/{calendar_id}/events/{event_id}",
+                payload=body,
+            )
+        else:
+            data = self._request(
+                "POST",
+                f"/calendars/{calendar_id}/events",
+                payload=body,
+            )
+
+        event_id = data.get("id", "")
+        if not event_id:
+            raise ValueError("Google Calendar API did not return an event id.")
+        return event_id
+
+    def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
+        calendar_id = quote(remote_calendar_id, safe="")
+        event_id = quote(remote_event_id, safe="")
+        self._request("DELETE", f"/calendars/{calendar_id}/events/{event_id}")
+
+
+class OutlookCalendarProvider(BaseCalendarProvider):
+    def list_calendars(self) -> Iterable[CalendarDescriptor]:
+        raise NotImplementedError("Outlook adapter is not wired yet.")
+
+    def upsert_event(
+        self,
+        payload: CalendarEventPayload,
+        remote_calendar_id: str,
+        remote_event_id: str | None = None,
+    ) -> str:
+        raise NotImplementedError("Outlook adapter is not wired yet.")
+
+    def delete_event(self, remote_calendar_id: str, remote_event_id: str) -> None:
+        raise NotImplementedError("Outlook adapter is not wired yet.")
+
+
+CALENDAR_PROVIDER_MAP = {
+    IntegrationConnection.Provider.GOOGLE: GoogleCalendarProvider,
+    IntegrationConnection.Provider.OUTLOOK: OutlookCalendarProvider,
+    IntegrationConnection.Provider.GENERIC: ConsoleCalendarProvider,
+}
+
+
+def get_calendar_provider(connection: IntegrationConnection) -> BaseCalendarProvider:
+    provider_cls = CALENDAR_PROVIDER_MAP.get(connection.provider, ConsoleCalendarProvider)
+    return provider_cls(connection)

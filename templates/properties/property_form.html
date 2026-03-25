@@ -1,0 +1,272 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'properties:list' %}" class="btn btn-ghost btn-sm">← Properties</a>
+{% endblock %}
+
+{% block content %}
+
+<div style="max-width:760px;">
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="flash flash-danger mb-3">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <!-- Address -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Address</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+
+      <div>
+        <label class="form-label">Street address <span style="color:var(--color-danger);">*</span></label>
+        {{ form.address }}
+        {% if form.address.errors %}<div class="form-error">{{ form.address.errors.0 }}</div>{% endif %}
+      </div>
+
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">Unit / Apt</label>
+          {{ form.unit }}
+        </div>
+        <div class="col-8">
+          <label class="form-label">City <span style="color:var(--color-danger);">*</span></label>
+          {{ form.city }}
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">State <span style="color:var(--color-danger);">*</span></label>
+          {{ form.state }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">ZIP <span style="color:var(--color-danger);">*</span></label>
+          {{ form.zip_code }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">County</label>
+          {{ form.county }}
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label">Neighborhood</label>
+          {{ form.neighborhood }}
+        </div>
+        <div class="col-6">
+          <label class="form-label">School district</label>
+          {{ form.school_district }}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Identity & Status -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Listing identity</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">MLS #</label>
+          {{ form.mls_number }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Property type</label>
+          {{ form.property_type }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Status</label>
+          {{ form.status }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physical -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Physical details</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+      <div class="row g-3">
+        <div class="col-3">
+          <label class="form-label">Beds</label>
+          {{ form.bedrooms }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Full baths</label>
+          {{ form.bathrooms_full }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Half baths</label>
+          {{ form.bathrooms_half }}
+        </div>
+        <div class="col-3">
+          <label class="form-label">Garage</label>
+          {{ form.garage_spaces }}
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">Square feet</label>
+          {{ form.square_feet }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Lot size (sqft)</label>
+          {{ form.lot_size_sqft }}
+        </div>
+        <div class="col-2">
+          <label class="form-label">Stories</label>
+          {{ form.stories }}
+        </div>
+        <div class="col-2">
+          <label class="form-label">Year built</label>
+          {{ form.year_built }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Pricing</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label">List price</label>
+          {{ form.list_price }}
+        </div>
+        <div class="col-6">
+          <label class="form-label">Original list price</label>
+          {{ form.original_list_price }}
+        </div>
+      </div>
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">Sold price</label>
+          {{ form.sold_price }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Tax assessed value</label>
+          {{ form.tax_assessed_value }}
+        </div>
+        <div class="col-2">
+          <label class="form-label">Annual taxes</label>
+          {{ form.annual_taxes }}
+        </div>
+        <div class="col-2">
+          <label class="form-label">HOA/mo</label>
+          {{ form.hoa_fee }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dates -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Key dates</span></div>
+    <div class="card-body" style="padding:1.25rem;">
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">List date</label>
+          {{ form.list_date }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Expiration date</label>
+          {{ form.expiration_date }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Sold date</label>
+          {{ form.sold_date }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- People -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">People</span></div>
+    <div class="card-body" style="padding:1.25rem;">
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="form-label">Owner / seller contact</label>
+          {{ form.owner_contact }}
+        </div>
+        <div class="col-6">
+          <label class="form-label">Listing agent</label>
+          {{ form.listing_agent }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Showing -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Showing &amp; access</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+      <div class="row g-3">
+        <div class="col-4">
+          <label class="form-label">Lockbox type</label>
+          {{ form.lockbox_type }}
+        </div>
+        <div class="col-4">
+          <label class="form-label">Lockbox code</label>
+          {{ form.lockbox_code }}
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Showing instructions</label>
+        {{ form.showing_instructions }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Description -->
+  <div class="card mb-3">
+    <div class="card-header"><span class="card-title">Description &amp; notes</span></div>
+    <div class="card-body" style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
+      <div>
+        <label class="form-label">Public description</label>
+        {{ form.description }}
+      </div>
+      <div>
+        <label class="form-label">Internal notes</label>
+        {{ form.notes }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div style="display:flex;gap:.75rem;margin-top:1.25rem;">
+    <button type="submit" class="btn btn-primary">
+      {% if object %}Save changes{% else %}Add property{% endif %}
+    </button>
+    <a href="{% if object %}{% url 'properties:detail' object.pk %}{% else %}{% url 'properties:list' %}{% endif %}"
+       class="btn btn-ghost">Cancel</a>
+  </div>
+
+</form>
+</div>
+
+<style>
+.form-label {
+  display: block;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: .375rem;
+}
+.form-error {
+  font-size: .75rem;
+  color: var(--color-danger);
+  margin-top: .25rem;
+}
+</style>
+
+{% endblock %}

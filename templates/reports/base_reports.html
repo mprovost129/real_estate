@@ -1,0 +1,136 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block page_title %}Reports{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<!-- Sub-nav -->
+<div style="display:flex;gap:.25rem;margin-bottom:1.25rem;border-bottom:1px solid var(--border-muted);padding-bottom:0;">
+  <a href="{% url 'reports:overview' %}"
+     class="report-tab {% if active_section == 'overview' %}active{% endif %}">
+    <i class="bi bi-grid-1x2 me-1"></i> Overview
+  </a>
+  <a href="{% url 'reports:contacts' %}"
+     class="report-tab {% if active_section == 'contacts' %}active{% endif %}">
+    <i class="bi bi-people me-1"></i> Contacts
+  </a>
+  <a href="{% url 'reports:pipeline' %}"
+     class="report-tab {% if active_section == 'pipeline' %}active{% endif %}">
+    <i class="bi bi-funnel me-1"></i> Pipeline
+  </a>
+  <a href="{% url 'reports:tasks' %}"
+     class="report-tab {% if active_section == 'tasks' %}active{% endif %}">
+    <i class="bi bi-check2-square me-1"></i> Tasks
+  </a>
+  <a href="{% url 'reports:transactions' %}"
+     class="report-tab {% if active_section == 'transactions' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text me-1"></i> Transactions
+  </a>
+  {% if org_capabilities.manage_compliance %}
+    <a href="{% url 'reports:compliance' %}"
+       class="report-tab {% if active_section == 'compliance' %}active{% endif %}">
+      <i class="bi bi-shield-check me-1"></i> Compliance
+    </a>
+  {% endif %}
+</div>
+
+{% block report_content %}{% endblock %}
+
+<style>
+.report-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: .5rem .875rem;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.report-tab:hover { color: var(--text-primary); }
+.report-tab.active {
+  color: var(--brand-600);
+  border-bottom-color: var(--brand-500);
+}
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 1.125rem 1.25rem;
+}
+.metric-label {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: .375rem;
+}
+.metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.metric-sub {
+  font-size: .75rem;
+  color: var(--text-muted);
+  margin-top: .25rem;
+}
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+.chart-title {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  margin-bottom: .5rem;
+  font-size: .8125rem;
+}
+.bar-label {
+  width: 140px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+.bar-track {
+  flex: 1;
+  height: .625rem;
+  background: var(--bg-subtle);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--brand-400);
+  transition: width .4s ease;
+}
+.bar-count {
+  width: 2.5rem;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+</style>
+
+{% endblock %}

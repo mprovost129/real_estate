@@ -1,0 +1,74 @@
+{% extends "settings/base_settings.html" %}
+
+{% block title %}Integration Settings{% endblock %}
+
+{% block settings_content %}
+<div class="card mb-3">
+  <div class="card-header">
+    <span class="card-title"><i class="bi bi-plug me-1" style="color:var(--brand-500);"></i>Integration Connections</span>
+  </div>
+  <div style="padding:.625rem 1.125rem;border-bottom:1px solid var(--border-subtle);display:flex;gap:.5rem;flex-wrap:wrap;">
+    <a href="{% url 'integrations:oauth_start' 'google' %}" class="btn btn-ghost btn-sm">
+      <i class="bi bi-google me-1"></i>Connect Google
+    </a>
+    <a href="{% url 'integrations:oauth_start' 'outlook' %}" class="btn btn-ghost btn-sm">
+      <i class="bi bi-microsoft me-1"></i>Connect Outlook
+    </a>
+    <span style="font-size:.75rem;color:var(--text-muted);align-self:center;">
+      OAuth callback capture scaffold is enabled.
+    </span>
+  </div>
+  <div class="card-body" style="padding:.5rem 1.125rem;">
+    {% if connections %}
+      {% for conn in connections %}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.625rem 0;border-bottom:1px solid var(--border-subtle);">
+        <div>
+          <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">
+            {% if conn.display_name %}{{ conn.display_name }}{% else %}{{ conn.get_provider_display }}{% endif %}
+          </div>
+          <div style="font-size:.75rem;color:var(--text-muted);">
+            {{ conn.get_integration_type_display }} · {{ conn.get_provider_display }} · {{ conn.get_status_display }}
+          </div>
+          {% if conn.last_error %}
+            <div style="font-size:.75rem;color:var(--red-600);margin-top:.2rem;">
+              {{ conn.last_error|truncatechars:180 }}
+            </div>
+          {% endif %}
+        </div>
+        <form method="post" action="{% url 'integrations:toggle_active' conn.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost btn-sm">
+            {% if conn.is_active %}Disable{% else %}Enable{% endif %}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:.8125rem;color:var(--text-muted);padding:.5rem 0;">No integration connections configured yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="bi bi-plus-circle me-1" style="color:var(--brand-500);"></i>Add Connection</span>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-12 col-md-6">{{ form.integration_type }}</div>
+        <div class="col-12 col-md-6">{{ form.provider }}</div>
+        <div class="col-12">{{ form.display_name }}</div>
+        <div class="col-12">{{ form.external_account_id }}</div>
+        <div class="col-12" style="font-size:.8125rem;color:var(--text-secondary);">
+          <label style="display:flex;align-items:center;gap:.4rem;">{{ form.is_active }} Active</label>
+        </div>
+      </div>
+      <div style="margin-top:.75rem;">
+        <button type="submit" class="btn btn-primary btn-sm">Save Connection</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

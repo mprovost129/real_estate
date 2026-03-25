@@ -1,0 +1,223 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}Tasks{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'tasks:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Task
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================
+     Tabs
+     ================================================================ -->
+<div style="display:flex;align-items:center;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border-muted);padding-bottom:0;">
+  <a href="?tab=today{% if q %}&q={{ q }}{% endif %}" class="tab-link {% if tab == 'today' %}active{% endif %}">
+    Today
+    {% if count_today %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_today }}</span>{% endif %}
+  </a>
+  <a href="?tab=overdue{% if q %}&q={{ q }}{% endif %}" class="tab-link {% if tab == 'overdue' %}active{% endif %}">
+    Overdue
+    {% if count_overdue %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;background:var(--color-danger);">{{ count_overdue }}</span>{% endif %}
+  </a>
+  <a href="?tab=upcoming{% if q %}&q={{ q }}{% endif %}" class="tab-link {% if tab == 'upcoming' %}active{% endif %}">
+    Upcoming
+    {% if count_upcoming %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_upcoming }}</span>{% endif %}
+  </a>
+  <a href="?tab=completed{% if q %}&q={{ q }}{% endif %}" class="tab-link {% if tab == 'completed' %}active{% endif %}">Completed</a>
+  <a href="?tab=all{% if q %}&q={{ q }}{% endif %}" class="tab-link {% if tab == 'all' %}active{% endif %}">All</a>
+</div>
+
+<!-- ================================================================
+     Filters row
+     ================================================================ -->
+<form method="get" class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <input type="hidden" name="tab" value="{{ tab }}">
+
+  <input type="search" name="q" value="{{ q }}"
+         class="input" style="width:220px;height:2rem;font-size:.8125rem;"
+         placeholder="Search tasks…">
+
+  <select name="type" class="input" style="width:160px;height:2rem;font-size:.8125rem;">
+    <option value="">All types</option>
+    {% for val, label in task_type_choices %}
+      <option value="{{ val }}" {% if filter_type == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="assigned" class="input" style="width:140px;height:2rem;font-size:.8125rem;">
+    <option value="" {% if filter_assigned == "" %}selected{% endif %}>All assignees</option>
+    <option value="me" {% if filter_assigned == "me" %}selected{% endif %}>Assigned to me</option>
+  </select>
+
+  <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
+  {% if q or filter_type or filter_assigned %}
+    <a href="?tab={{ tab }}" class="btn btn-ghost btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+<!-- ================================================================
+     Task list
+     ================================================================ -->
+<div class="card" style="padding:0;overflow:hidden;">
+  {% if tasks %}
+    <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border-muted);background:var(--bg-subtle);">
+          <th style="padding:.5rem 1rem;font-weight:600;color:var(--text-secondary);text-align:left;">Task</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);text-align:left;white-space:nowrap;">Due</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);text-align:left;">Type</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);text-align:left;">Priority</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);text-align:left;">Assigned to</th>
+          <th style="padding:.5rem .75rem;font-weight:600;color:var(--text-secondary);text-align:left;">Contact</th>
+          <th style="padding:.5rem .75rem;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr style="border-bottom:1px solid var(--border-muted);" class="task-row">
+          <!-- Title -->
+          <td style="padding:.625rem 1rem;">
+            <a href="{% url 'tasks:detail' task.pk %}"
+               style="font-weight:500;color:var(--text-primary);text-decoration:none;">
+              {{ task.title }}
+            </a>
+            {% if task.description %}
+              <div style="color:var(--text-muted);font-size:.75rem;margin-top:.125rem;">
+                {{ task.description|truncatechars:60 }}
+              </div>
+            {% endif %}
+          </td>
+
+          <!-- Due date -->
+          <td style="padding:.625rem .75rem;white-space:nowrap;">
+            {% if task.is_overdue %}
+              <span style="color:var(--color-danger);font-weight:500;">{{ task.due_date }}</span>
+            {% else %}
+              <span style="color:var(--text-secondary);">{{ task.due_date }}</span>
+            {% endif %}
+            {% if task.due_time %}
+              <span style="color:var(--text-muted);font-size:.75rem;"> {{ task.due_time|time:"g:i A" }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Type -->
+          <td style="padding:.625rem .75rem;">
+            <span class="badge badge-gray">{{ task.get_task_type_display }}</span>
+          </td>
+
+          <!-- Priority -->
+          <td style="padding:.625rem .75rem;">
+            {% if task.priority == "urgent" %}
+              <span class="badge badge-red">Urgent</span>
+            {% elif task.priority == "high" %}
+              <span class="badge badge-yellow">High</span>
+            {% elif task.priority == "low" %}
+              <span class="badge badge-gray" style="opacity:.7;">Low</span>
+            {% else %}
+              <span class="badge badge-gray">Normal</span>
+            {% endif %}
+          </td>
+
+          <!-- Assigned to -->
+          <td style="padding:.625rem .75rem;color:var(--text-secondary);">
+            {% if task.assigned_to %}
+              {{ task.assigned_to.full_name }}
+            {% else %}
+              <span style="color:var(--text-muted);">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Contact -->
+          <td style="padding:.625rem .75rem;">
+            {% if task.contact %}
+              <a href="{% url 'contacts:detail' task.contact.pk %}"
+                 style="color:var(--text-link);text-decoration:none;">
+                {{ task.contact.full_name }}
+              </a>
+            {% else %}
+              <span style="color:var(--text-muted);">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td style="padding:.625rem .75rem;text-align:right;white-space:nowrap;">
+            {% if task.status != "completed" and task.status != "cancelled" %}
+              <!-- Quick complete -->
+              <form method="post" action="{% url 'tasks:complete' task.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Mark complete"
+                        style="color:var(--color-success);padding:.25rem .4rem;">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </form>
+            {% endif %}
+            <a href="{% url 'tasks:update' task.pk %}" class="btn btn-ghost btn-sm" title="Edit"
+               style="padding:.25rem .4rem;">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-top:1px solid var(--border-muted);font-size:.8125rem;">
+      <span style="color:var(--text-muted);">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+      <div style="display:flex;gap:.5rem;">
+        {% if page_obj.has_previous %}
+          <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_assigned %}&assigned={{ filter_assigned }}{% endif %}"
+             class="btn btn-ghost btn-sm">← Prev</a>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}{% if filter_assigned %}&assigned={{ filter_assigned }}{% endif %}"
+             class="btn btn-ghost btn-sm">Next →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  {% else %}
+    <div style="padding:3rem;text-align:center;color:var(--text-muted);">
+      <i class="bi bi-check2-all" style="font-size:2rem;display:block;margin-bottom:.75rem;"></i>
+      {% if tab == "today" %}No tasks due today
+      {% elif tab == "overdue" %}No overdue tasks — you're all caught up!
+      {% elif tab == "upcoming" %}No upcoming tasks scheduled
+      {% elif tab == "completed" %}No completed tasks yet
+      {% else %}No tasks found{% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.tab-link {
+  display: inline-flex;
+  align-items: center;
+  padding: .5rem .875rem;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.tab-link:hover { color: var(--text-primary); }
+.tab-link.active {
+  color: var(--brand-600);
+  border-bottom-color: var(--brand-500);
+}
+.task-row:hover { background: var(--bg-subtle); }
+</style>
+
+{% endblock %}
+

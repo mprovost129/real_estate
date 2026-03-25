@@ -1,0 +1,25 @@
+{% extends "base_app.html" %}
+
+{% block title %}Delete Task{% endblock %}
+{% block page_title %}Delete Task{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;">
+  <div class="card">
+    <div class="card-body" style="padding:1.5rem;">
+      <h2 style="font-size:1rem;font-weight:600;margin-bottom:.75rem;">Delete "{{ task.title }}"?</h2>
+      <p style="color:var(--text-secondary);font-size:.875rem;margin-bottom:1.5rem;">
+        This will permanently delete the task. This action cannot be undone.
+      </p>
+      <form method="post" style="display:flex;gap:.75rem;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm"
+                style="background:var(--color-danger);color:#fff;border-color:var(--color-danger);">
+          Yes, delete
+        </button>
+        <a href="{% url 'tasks:detail' task.pk %}" class="btn btn-ghost btn-sm">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

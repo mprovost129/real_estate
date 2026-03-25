@@ -1,0 +1,71 @@
+{% extends "base_app.html" %}
+
+{% block title %}Lead Forms{% endblock %}
+{% block page_title %}Lead Forms{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'lead_forms:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>New Form
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{% if forms %}
+<div class="row g-3">
+  {% for lf in forms %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card h-100" style="{% if not lf.is_active %}opacity:.65;{% endif %}">
+      <div class="card-header">
+        <span class="card-title" style="font-size:.875rem;">{{ lf.name }}</span>
+        <span class="badge {% if lf.is_active %}badge-green{% else %}badge-gray{% endif %}"
+              style="font-size:.65rem;">
+          {% if lf.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem;">
+          <span class="badge" style="font-size:.65rem;">{{ lf.get_form_type_display }}</span>
+          {% if lf.assigned_to %}
+            · Assigned to {{ lf.assigned_to.full_name }}
+          {% endif %}
+        </div>
+        {% if lf.headline %}
+        <div style="font-size:.8125rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">
+          {{ lf.headline }}
+        </div>
+        {% endif %}
+        <div style="font-size:.75rem;color:var(--text-muted);">
+          {{ lf.submissions.count }} submission{{ lf.submissions.count|pluralize }}
+        </div>
+      </div>
+      <div class="card-body" style="padding:.5rem 1.25rem;border-top:1px solid var(--border-subtle);
+           display:flex;gap:.5rem;">
+        <a href="{% url 'lead_forms:detail' lf.pk %}" class="btn btn-secondary btn-sm"
+           style="font-size:.75rem;">View</a>
+        <a href="{% url 'lead_forms:update' lf.pk %}" class="btn btn-ghost btn-sm"
+           style="font-size:.75rem;">Edit</a>
+        <a href="{% url 'lead_forms:public_form' lf.slug %}" target="_blank"
+           class="btn btn-ghost btn-sm" style="font-size:.75rem;" title="Preview public form">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="padding:4rem;text-align:center;">
+  <i class="bi bi-ui-checks-grid" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem;"></i>
+  <p style="font-size:.9375rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">No lead forms yet</p>
+  <p style="font-size:.8125rem;color:var(--text-muted);margin-bottom:1.5rem;">
+    Create a form and embed it on your website to capture leads automatically.
+  </p>
+  <a href="{% url 'lead_forms:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Create your first form
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}

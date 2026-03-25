@@ -1,0 +1,104 @@
+{% extends "base_app.html" %}
+
+{% block title %}Automations{% endblock %}
+{% block page_title %}Automation Rules{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'automations:test' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-play-circle"></i> Test Rules
+  </a>
+  <a href="{% url 'automations:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Rule
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" action="" style="margin-bottom:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search rules..." class="input" style="max-width:220px;">
+  <select name="trigger" class="input" style="max-width:220px;">
+    <option value="">All Triggers</option>
+    {% for val, label in trigger_choices %}
+      <option value="{{ val }}" {% if trigger == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" class="input" style="max-width:160px;">
+    <option value="">Any Status</option>
+    <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+    <option value="inactive" {% if status == "inactive" %}selected{% endif %}>Inactive</option>
+  </select>
+  <button type="submit" class="btn btn-ghost btn-sm">Filter</button>
+  {% if q or trigger or status %}
+    <a href="{% url 'automations:list' %}" class="btn btn-ghost btn-sm">Clear</a>
+  {% endif %}
+</form>
+
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+  <span class="badge badge-gray">All: {{ count_all }}</span>
+  <span class="badge badge-gray">Active: {{ count_active }}</span>
+  <span class="badge badge-gray">Inactive: {{ count_inactive }}</span>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-8">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-lightning-charge me-1"></i> Rules</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if rules %}
+          {% for rule in rules %}
+            <div style="padding:.75rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;gap:1rem;">
+              <div>
+                <div style="font-weight:600;color:var(--text-primary);">{{ rule.name }}</div>
+                <div style="font-size:.8125rem;color:var(--text-muted);">
+                  {{ rule.get_trigger_type_display }} ·
+                  {% if rule.is_active %}Active{% else %}Inactive{% endif %} ·
+                  {{ rule.actions|length }} action{{ rule.actions|length|pluralize }}
+                </div>
+              </div>
+              <div style="display:flex;gap:.4rem;align-items:flex-start;">
+                <a href="{% url 'automations:update' rule.pk %}" class="btn btn-ghost btn-sm">Edit</a>
+                <a href="{% url 'automations:delete' rule.pk %}" class="btn btn-ghost btn-sm">Delete</a>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);">
+            <i class="bi bi-lightning-charge" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No automation rules yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-activity me-1"></i> Recent Runs</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1rem;">
+        {% if recent_runs %}
+          {% for run in recent_runs %}
+            <div style="padding:.65rem 0;border-bottom:1px solid var(--border-muted);">
+              <div style="font-size:.8125rem;font-weight:600;">{{ run.rule.name }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ run.get_status_display }} · {{ run.created_at|timesince }} ago
+              </div>
+              {% if run.message %}
+                <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.125rem;">
+                  {{ run.message|truncatechars:80 }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);font-size:.8125rem;">No runs yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,726 @@
+{% extends "base_app.html" %}
+{% load contact_tags %}
+
+{% block title %}{{ contact.full_name }}{% endblock %}
+{% block page_title %}Contacts{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'contacts:update' contact.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{# Breadcrumb #}
+<nav style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">
+  <a href="{% url 'contacts:list' %}" style="color:var(--text-muted);">Contacts</a>
+  <span style="margin:0 .375rem;">/</span>
+  <span style="color:var(--text-primary);">{{ contact.full_name }}</span>
+</nav>
+
+{# ── Contact header ─────────────────────────────────────────────── #}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-start gap-3 flex-wrap">
+
+      {# Avatar #}
+      <div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:var(--brand-500);
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:1.125rem;font-weight:700;color:#fff;flex-shrink:0;">
+        {{ contact.first_name|first|upper }}{{ contact.last_name|first|upper }}
+      </div>
+
+      {# Name + meta #}
+      <div style="flex:1;min-width:0;">
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h2 style="font-size:1.125rem;font-weight:700;color:var(--text-primary);margin:0;">
+            {{ contact.full_name }}
+          </h2>
+          {% if contact.preferred_name %}
+            <span style="font-size:.8125rem;color:var(--text-muted);">"{{ contact.preferred_name }}"</span>
+          {% endif %}
+          <span class="badge" style="{{ contact.contact_type|type_badge_style }}">
+            {{ contact.get_contact_type_display }}
+          </span>
+          {% if missing_document_count %}
+            <span class="badge badge-red">{{ missing_document_count }} missing docs</span>
+          {% endif %}
+          {% if contact.do_not_contact %}
+            <span class="badge badge-red"><i class="bi bi-slash-circle me-1"></i>Do Not Contact</span>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-3" style="font-size:.8125rem;color:var(--text-secondary);">
+          {% if contact.primary_email %}
+            <a href="mailto:{{ contact.primary_email }}" style="color:var(--text-secondary);">
+              <i class="bi bi-envelope me-1"></i>{{ contact.primary_email }}
+            </a>
+          {% endif %}
+          {% if contact.primary_phone %}
+            <a href="tel:{{ contact.primary_phone }}" style="color:var(--text-secondary);">
+              <i class="bi bi-telephone me-1"></i>{{ contact.primary_phone }}
+            </a>
+          {% endif %}
+          {% if contact.assigned_to %}
+            <span><i class="bi bi-person me-1"></i>{{ contact.assigned_to.full_name }}</span>
+          {% endif %}
+          {% if contact.source %}
+            <span><i class="bi bi-signpost me-1"></i>{{ contact.get_source_display }}</span>
+          {% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-1 align-items-center mt-2" id="tags-display">
+          {% for tag in contact.tags.all %}
+            <span class="badge" style="background:{{ tag.color }}22;color:{{ tag.color }};
+                                       border:1px solid {{ tag.color }}44;">
+              {{ tag.name }}
+            </span>
+          {% empty %}
+            <span style="font-size:.75rem;color:var(--text-muted);">No tags</span>
+          {% endfor %}
+          {% if all_tags %}
+          <button type="button" onclick="toggleTagEditor()"
+                  class="btn btn-ghost btn-sm" title="Edit tags"
+                  style="padding:.1rem .35rem;font-size:.75rem;margin-left:.25rem;">
+            <i class="bi bi-pencil-fill" style="font-size:.65rem;"></i>
+          </button>
+          {% endif %}
+        </div>
+
+        {# ── Inline tag editor ── #}
+        {% if all_tags %}
+        <div id="tag-editor" style="display:none;margin-top:.625rem;">
+          <form method="post" action="{% url 'contacts:set_tags' contact.pk %}">
+            {% csrf_token %}
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              {% for tag in all_tags %}
+              <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;
+                             font-size:.8125rem;padding:.2rem .5rem;border-radius:9999px;
+                             border:1px solid {{ tag.color }}55;
+                             background:{% if tag.pk in contact_tag_ids %}{{ tag.color }}22{% else %}transparent{% endif %};
+                             color:{{ tag.color }};">
+                <input type="checkbox" name="tags" value="{{ tag.pk }}"
+                       {% if tag.pk in contact_tag_ids %}checked{% endif %}
+                       style="accent-color:{{ tag.color }};width:.85rem;height:.85rem;">
+                {{ tag.name }}
+              </label>
+              {% endfor %}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary btn-sm" style="font-size:.75rem;">
+                Save Tags
+              </button>
+              <button type="button" onclick="toggleTagEditor()"
+                      class="btn btn-ghost btn-sm" style="font-size:.75rem;">
+                Cancel
+              </button>
+              <a href="{% url 'contacts:tag_list' %}" class="btn btn-ghost btn-sm"
+                 style="font-size:.75rem;margin-left:auto;">
+                <i class="bi bi-tags me-1"></i>Manage Tags
+              </a>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Quick-dial actions #}
+      <div class="d-flex gap-1 flex-shrink-0">
+        {% if contact.primary_phone %}
+          <a href="tel:{{ contact.primary_phone }}" class="btn btn-secondary btn-sm" title="Call">
+            <i class="bi bi-telephone-fill"></i>
+          </a>
+          <a href="sms:{{ contact.primary_phone }}" class="btn btn-secondary btn-sm" title="Text">
+            <i class="bi bi-chat-fill"></i>
+          </a>
+        {% endif %}
+        {% if contact.primary_email %}
+          <a href="mailto:{{ contact.primary_email }}" class="btn btn-secondary btn-sm" title="Email">
+            <i class="bi bi-envelope-fill"></i>
+          </a>
+        {% endif %}
+        <a href="{% url 'contacts:update' contact.pk %}" class="btn btn-secondary btn-sm" title="Edit contact">
+          <i class="bi bi-pencil-fill"></i>
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ── Two-column layout ──────────────────────────────────────────── #}
+<div class="row g-3">
+
+  {# Left: Communication action bar + Activity timeline #}
+  <div class="col-12 col-xl-7">
+
+    {# ── Communication action bar ── #}
+    <div class="card mb-3">
+      <div style="border-bottom:1px solid var(--border-muted);padding:.625rem 1.125rem;display:flex;gap:.375rem;flex-wrap:wrap;">
+        <button class="comm-tab-btn active" onclick="showCommTab('call', this)">
+          <i class="bi bi-telephone-fill me-1"></i>Log Call
+        </button>
+        <button class="comm-tab-btn" onclick="showCommTab('email', this)">
+          <i class="bi bi-envelope-fill me-1"></i>Log Email
+        </button>
+        <button class="comm-tab-btn" onclick="showCommTab('text', this)">
+          <i class="bi bi-chat-fill me-1"></i>Log Text
+        </button>
+        <button class="comm-tab-btn" onclick="showCommTab('note', this)">
+          <i class="bi bi-pencil-fill me-1"></i>Add Note
+        </button>
+      </div>
+      <div class="card-body" style="padding:1rem 1.125rem;">
+
+        {# Call form #}
+        <div id="commTab-call" class="comm-tab">
+          <form method="post" action="{% url 'contacts:log_communication' contact.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="comm_type" value="call">
+            <div class="row g-2 mb-2">
+              <div class="col-12 col-sm-4">
+                <label class="form-label" style="font-size:.75rem;">Direction</label>
+                {{ log_call_form.call_direction }}
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label" style="font-size:.75rem;">Outcome</label>
+                {{ log_call_form.call_outcome }}
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label" style="font-size:.75rem;">Duration (mins)</label>
+                {{ log_call_form.call_duration_minutes }}
+              </div>
+            </div>
+            <label class="form-label" style="font-size:.75rem;">Notes</label>
+            {{ log_call_form.body }}
+            <div class="d-flex justify-content-end mt-2">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-telephone me-1"></i>Save Call Log
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {# Email form #}
+        <div id="commTab-email" class="comm-tab" style="display:none;">
+          <form method="post" action="{% url 'contacts:log_communication' contact.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="comm_type" value="email">
+            {% if email_templates %}
+            <div style="margin-bottom:.75rem;">
+              <label class="form-label" style="font-size:.75rem;">Use Template</label>
+              <select id="emailTemplateSelect" class="input" onchange="loadEmailTemplate(this.value)">
+                <option value="">— Choose a template —</option>
+                {% for tmpl in email_templates %}
+                  <option value="{{ tmpl.pk }}"
+                          data-subject="{{ tmpl.subject }}"
+                          data-body="{{ tmpl.body }}">
+                    {{ tmpl.get_category_display }} — {{ tmpl.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div style="margin-bottom:.5rem;">
+              <label class="form-label" style="font-size:.75rem;">Subject</label>
+              {{ log_email_form.email_subject }}
+            </div>
+            <label class="form-label" style="font-size:.75rem;">Body</label>
+            <textarea name="body" id="emailBody" class="input" rows="6"
+                      placeholder="Email body…">{{ log_email_form.body.value|default:'' }}</textarea>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem;">
+              Merge fields supported: <code>{{first_name}}</code>, <code>{{last_name}}</code>, <code>{{full_name}}</code>,
+              <code>{{address}}</code>, <code>{{agent_name}}</code>
+            </div>
+            <div class="d-flex justify-content-end mt-2">
+              <button type="submit" name="send_now" value="0" class="btn btn-ghost btn-sm me-2">
+                <i class="bi bi-journal-text me-1"></i>Log Only
+              </button>
+              <button type="submit" name="send_now" value="1" class="btn btn-primary btn-sm">
+                <i class="bi bi-send-fill me-1"></i>Send + Log
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {# Text form #}
+        <div id="commTab-text" class="comm-tab" style="display:none;">
+          <form method="post" action="{% url 'contacts:log_communication' contact.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="comm_type" value="text">
+            {% if sms_templates %}
+            <div style="margin-bottom:.75rem;">
+              <label class="form-label" style="font-size:.75rem;">Use Template</label>
+              <select id="smsTemplateSelect" class="input" onchange="loadSmsTemplate(this.value)">
+                <option value="">— Choose a template —</option>
+                {% for tmpl in sms_templates %}
+                  <option value="{{ tmpl.pk }}" data-body="{{ tmpl.body }}">
+                    {{ tmpl.get_category_display }} — {{ tmpl.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <label class="form-label" style="font-size:.75rem;">Message</label>
+            <textarea name="body" id="smsBody" class="input" rows="4"
+                      placeholder="Text message…"></textarea>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem;">
+              Merge fields supported: <code>{{first_name}}</code>, <code>{{last_name}}</code>, <code>{{full_name}}</code>,
+              <code>{{address}}</code>, <code>{{agent_name}}</code>
+            </div>
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;" id="smsCharCount">0 characters</div>
+            <div class="d-flex justify-content-end mt-2">
+              <button type="submit" name="send_now" value="0" class="btn btn-ghost btn-sm me-2">
+                <i class="bi bi-journal-text me-1"></i>Log Only
+              </button>
+              <button type="submit" name="send_now" value="1" class="btn btn-primary btn-sm">
+                <i class="bi bi-send-fill me-1"></i>Send + Log
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {# Note form #}
+        <div id="commTab-note" class="comm-tab" style="display:none;">
+          <form method="post" action="{% url 'contacts:log_communication' contact.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="comm_type" value="note">
+            <div class="d-flex gap-2 mb-2 align-items-center">
+              <div style="flex:1;">
+                <label class="form-label" style="font-size:.75rem;">Type</label>
+                {{ log_note_form.note_type }}
+              </div>
+              <div style="padding-top:1.25rem;">
+                <label class="d-flex align-items-center gap-1" style="font-size:.8125rem;color:var(--text-secondary);white-space:nowrap;">
+                  {{ log_note_form.is_pinned }} Pin
+                </label>
+              </div>
+            </div>
+            {{ log_note_form.body }}
+            <div class="d-flex justify-content-end mt-2">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Save Note
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    {# ── Activity feed ── #}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-activity me-1" style="color:var(--brand-500);"></i>
+          Activity
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ notes|length }} entries</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if notes %}
+          {% for note in notes %}
+          <div class="activity-item" style="padding:.75rem 0;border-bottom:1px solid var(--border-muted);">
+
+            {# Icon bubble #}
+            <div style="width:2rem;height:2rem;border-radius:9999px;
+                        background:{% if note.note_type == 'call' %}var(--green-50,#f0fdf4){% elif note.note_type == 'email' %}#eff6ff{% elif note.note_type == 'text' %}var(--purple-50,#faf5ff){% elif note.note_type == 'meeting' %}var(--orange-50,#fff7ed){% elif note.note_type == 'showing' %}var(--yellow-50,#fefce8){% else %}var(--bg-subtle){% endif %};
+                        border:1px solid var(--border-base);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.125rem;">
+              {% note_type_icon note.note_type as icon %}
+              <i class="bi {{ icon }}" style="font-size:.7rem;
+                color:{% if note.note_type == 'call' %}var(--green-600,#16a34a){% elif note.note_type == 'email' %}#2563eb{% elif note.note_type == 'text' %}#7c3aed{% elif note.note_type == 'meeting' %}#ea580c{% elif note.note_type == 'showing' %}#ca8a04{% elif note.is_pinned %}var(--brand-500){% else %}var(--text-muted){% endif %};"></i>
+            </div>
+
+            <div class="activity-body" style="flex:1;min-width:0;">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <div style="flex:1;min-width:0;">
+
+                  {# Header line #}
+                  <div style="display:flex;align-items:center;gap:.375rem;flex-wrap:wrap;margin-bottom:.25rem;">
+                    <span style="font-size:.8125rem;font-weight:600;color:var(--text-primary);">
+                      {{ note.get_note_type_display }}
+                    </span>
+                    {% if note.is_pinned %}
+                      <i class="bi bi-pin-angle-fill" style="color:var(--brand-500);font-size:.625rem;"></i>
+                    {% endif %}
+
+                    {# Call badges #}
+                    {% if note.note_type == 'call' %}
+                      {% if note.call_direction %}
+                        <span style="font-size:.7rem;padding:.1rem .35rem;border-radius:4px;
+                                     background:var(--bg-subtle);color:var(--text-secondary);">
+                          {% if note.call_direction == 'inbound' %}<i class="bi bi-arrow-down-left me-1"></i>{% else %}<i class="bi bi-arrow-up-right me-1"></i>{% endif %}
+                          {{ note.get_call_direction_display }}
+                        </span>
+                      {% endif %}
+                      {% if note.call_outcome %}
+                        <span style="font-size:.7rem;padding:.1rem .35rem;border-radius:4px;
+                                     background:{% if note.call_outcome == 'answered' %}var(--green-50,#f0fdf4){% else %}var(--bg-subtle){% endif %};
+                                     color:{% if note.call_outcome == 'answered' %}var(--green-700,#15803d){% else %}var(--text-secondary){% endif %};">
+                          {{ note.get_call_outcome_display }}
+                        </span>
+                      {% endif %}
+                      {% if note.call_duration_minutes %}
+                        <span style="font-size:.7rem;color:var(--text-muted);">{{ note.call_duration_minutes }}m</span>
+                      {% endif %}
+                    {% endif %}
+
+                    {# Email subject #}
+                    {% if note.note_type == 'email' and note.email_subject %}
+                      <span style="font-size:.8rem;color:var(--text-secondary);font-style:italic;">
+                        "{{ note.email_subject }}"
+                      </span>
+                    {% endif %}
+                  </div>
+
+                  {# Body #}
+                  {% if note.body %}
+                    <div style="font-size:.8125rem;color:var(--text-secondary);line-height:1.5;
+                                white-space:pre-wrap;">{{ note.body|truncatechars:300 }}</div>
+                  {% endif %}
+
+                </div>
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted);margin-top:.375rem;">
+                {% if note.author %}{{ note.author.full_name }} · {% endif %}
+                {{ note.created_at|date:"M j, Y g:i A" }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:2rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            <i class="bi bi-chat-dots" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            No activity yet. Use the panel above to log a call or add a note.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  {# Right: Info panels #}
+  <div class="col-12 col-xl-5">
+
+    {# Contact info #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-person-lines-fill me-1" style="color:var(--brand-500);"></i>Contact Info</span>
+      </div>
+      <div class="card-body">
+        {% include "contacts/_info_row.html" with label="Email" value=contact.primary_email icon="bi-envelope" %}
+        {% include "contacts/_info_row.html" with label="Phone" value=contact.primary_phone icon="bi-telephone" %}
+        {% if contact.address %}
+          {% include "contacts/_info_row.html" with label="Address" value=contact.address icon="bi-geo-alt" %}
+        {% endif %}
+        {% if contact.city or contact.state %}
+          {% include "contacts/_info_row.html" with label="City / State" value=contact.city|add:", "|add:contact.state icon="bi-map" %}
+        {% endif %}
+        {% if contact.date_of_birth %}
+          {% include "contacts/_info_row.html" with label="Birthday" value=contact.date_of_birth icon="bi-cake" %}
+        {% endif %}
+        {% if contact.home_anniversary %}
+          {% include "contacts/_info_row.html" with label="Home Anniversary" value=contact.home_anniversary icon="bi-house-heart" %}
+        {% endif %}
+        {% if contact.employer %}
+          {% include "contacts/_info_row.html" with label="Employer" value=contact.employer icon="bi-briefcase" %}
+        {% endif %}
+        {% if contact.social_linkedin or contact.social_facebook or contact.social_instagram %}
+        <div style="margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border-subtle);">
+          <div style="font-size:.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-bottom:.5rem;">Social</div>
+          <div class="d-flex gap-2">
+            {% if contact.social_linkedin %}
+              <a href="{{ contact.social_linkedin }}" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            {% endif %}
+            {% if contact.social_facebook %}
+              <a href="{{ contact.social_facebook }}" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="Facebook"><i class="bi bi-facebook"></i></a>
+            {% endif %}
+            {% if contact.social_instagram %}
+              <a href="https://instagram.com/{{ contact.social_instagram }}" target="_blank" class="btn btn-ghost btn-sm btn-icon" title="Instagram"><i class="bi bi-instagram"></i></a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Real estate details #}
+    {% if contact.buyer_seller_type or contact.financing_status != "unknown" or contact.price_min or contact.price_max %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-house-fill me-1" style="color:var(--brand-500);"></i>Real Estate</span>
+      </div>
+      <div class="card-body">
+        {% if contact.buyer_seller_type %}
+          {% include "contacts/_info_row.html" with label="Type" value=contact.get_buyer_seller_type_display icon="bi-tag" %}
+        {% endif %}
+        {% if contact.is_first_time_buyer is not None %}
+          {% include "contacts/_info_row.html" with label="First-Time Buyer" value=contact.is_first_time_buyer|yesno:"Yes,No,—" icon="bi-star" %}
+        {% endif %}
+        {% if contact.financing_status and contact.financing_status != "unknown" %}
+          {% include "contacts/_info_row.html" with label="Financing" value=contact.get_financing_status_display icon="bi-bank" %}
+        {% endif %}
+        {% if contact.pre_approval_amount %}
+          {% include "contacts/_info_row.html" with label="Pre-Approval" value=contact.pre_approval_amount|floatformat:0 icon="bi-currency-dollar" %}
+        {% endif %}
+        {% if contact.price_min or contact.price_max %}
+          <div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+            <i class="bi bi-cash-stack" style="color:var(--text-muted);width:1rem;text-align:center;flex-shrink:0;"></i>
+            <span style="font-size:.75rem;color:var(--text-muted);width:7rem;flex-shrink:0;">Price Range</span>
+            <span style="font-size:.8125rem;color:var(--text-primary);">
+              ${{ contact.price_min|default:"—"|floatformat:0 }} – ${{ contact.price_max|default:"—"|floatformat:0 }}
+            </span>
+          </div>
+        {% endif %}
+        {% if contact.timeline_urgency and contact.timeline_urgency != "unknown" %}
+          {% include "contacts/_info_row.html" with label="Timeline" value=contact.get_timeline_urgency_display icon="bi-clock" %}
+        {% endif %}
+        {% if contact.motivation_level %}
+          {% include "contacts/_info_row.html" with label="Motivation" value=contact.motivation_level icon="bi-lightning-fill" %}
+        {% endif %}
+        {% if contact.target_move_date %}
+          {% include "contacts/_info_row.html" with label="Move Date" value=contact.target_move_date icon="bi-calendar-check" %}
+        {% endif %}
+        {% if contact.preferred_areas %}
+          {% include "contacts/_info_row.html" with label="Preferred Areas" value=contact.preferred_areas icon="bi-pin-map" %}
+        {% endif %}
+        {% if contact.lender_name %}
+          {% include "contacts/_info_row.html" with label="Lender" value=contact.lender_name icon="bi-building" %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Open deals #}
+    {% if deals %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-funnel me-1" style="color:var(--brand-500);"></i>Deals</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for deal in deals %}
+        <div style="padding:.5rem 0;border-bottom:1px solid var(--border-subtle);font-size:.8125rem;">
+          <div style="font-weight:600;color:var(--text-primary);">{{ deal.pipeline.name }}</div>
+          <div style="color:var(--text-secondary);">{{ deal.stage.name }} · {{ deal.get_status_display }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Open tasks #}
+    {% if tasks %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-check2-square me-1" style="color:var(--brand-500);"></i>Open Tasks</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for task in tasks %}
+        <div class="task-item {% if task.is_overdue %}task-overdue{% endif %}">
+          <div class="priority-dot {{ task.priority }}"></div>
+          <div>
+            <div class="task-title">{{ task.title }}</div>
+            <div class="task-meta">{{ task.get_task_type_display }} · Due {{ task.due_date }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-folder2-open me-1" style="color:var(--brand-500);"></i>Documents</span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ documents|length }} file{{ documents|length|pluralize }}</span>
+      </div>
+      <div class="card-body">
+        {% if document_required_checklist %}
+          <div style="margin-bottom:.75rem;">
+            {% for req in document_required_checklist %}
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid var(--border-subtle);font-size:.8rem;">
+                <span style="color:var(--text-secondary);">{{ req.label }}</span>
+                {% if req.is_present %}
+                  <span style="color:var(--brand-600);font-weight:500;">{{ req.count }} uploaded</span>
+                {% else %}
+                  <span style="color:var(--red-600);font-weight:500;">Missing</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'contacts:document_upload' contact.pk %}" enctype="multipart/form-data" style="margin-bottom:.75rem;">
+          {% csrf_token %}
+          <div style="display:grid;gap:.5rem;">
+            {{ document_form.category }}
+            {{ document_form.title }}
+            {{ document_form.file }}
+            {{ document_form.notes }}
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-upload me-1"></i>Upload
+            </button>
+          </div>
+        </form>
+
+        {% if documents %}
+          {% for doc in documents %}
+            <div style="padding:.5rem 0;border-top:1px solid var(--border-subtle);">
+              <div style="display:flex;justify-content:space-between;gap:.5rem;">
+                <div>
+                  <a href="{{ doc.file.url }}" target="_blank" style="font-size:.8125rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                    {{ doc.title }}
+                  </a>
+                  <div style="font-size:.75rem;color:var(--text-muted);">
+                    {{ doc.get_category_display }} · {{ doc.created_at|date:"M j, Y g:i A" }}
+                    {% if doc.uploaded_by %} · {{ doc.uploaded_by.full_name }}{% endif %}
+                  </div>
+                </div>
+                <form method="post" action="{% url 'contacts:document_delete' contact.pk doc.pk %}" onsubmit="return confirm('Delete this document?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:.1rem .35rem;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+              {% if doc.notes %}
+                <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.25rem;">{{ doc.notes }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="font-size:.8125rem;color:var(--text-muted);">No documents uploaded yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Quick Task #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-plus-circle me-1" style="color:var(--brand-500);"></i>Quick Task</span>
+        <button type="button" class="btn btn-ghost btn-sm" style="padding:.125rem .375rem;font-size:.75rem;"
+                onclick="toggleQuickTask()">
+          <i class="bi bi-chevron-down" id="qtChevron"></i>
+        </button>
+      </div>
+      <div id="quickTaskPanel" style="display:none;">
+        <div class="card-body" style="padding:.75rem 1.125rem;">
+          <form method="post" action="{% url 'contacts:quick_task' contact.pk %}">
+            {% csrf_token %}
+            <div style="margin-bottom:.5rem;">
+              <input type="text" name="title" class="input" placeholder="Task title…" required>
+            </div>
+            <div class="row g-2">
+              <div class="col-7">
+                <select name="task_type" class="input" style="font-size:.8125rem;">
+                  {% for val, label in task_type_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-5">
+                <input type="date" name="due_date" class="input" style="font-size:.8125rem;">
+              </div>
+            </div>
+            <div class="d-flex justify-content-end" style="margin-top:.5rem;">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Add Task
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {# Danger zone #}
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border-subtle);">
+      <form method="post" action="{% url 'contacts:delete' contact.pk %}"
+            onsubmit="return confirm('Archive {{ contact.full_name }}? They will be hidden but not deleted.')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--color-danger);">
+          <i class="bi bi-archive me-1"></i>Archive contact
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+.comm-tab-btn {
+  display: inline-flex; align-items: center;
+  padding: .375rem .75rem; border-radius: 6px;
+  font-size: .8125rem; font-weight: 500;
+  background: none; border: 1px solid var(--border-muted);
+  color: var(--text-secondary); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.comm-tab-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
+.comm-tab-btn.active {
+  background: var(--brand-500); border-color: var(--brand-500);
+  color: #fff;
+}
+</style>
+
+<script>
+function toggleTagEditor() {
+  const editor  = document.getElementById('tag-editor');
+  const display = document.getElementById('tags-display');
+  const isHidden = editor.style.display === 'none';
+  editor.style.display  = isHidden ? 'block' : 'none';
+  display.style.display = isHidden ? 'none'  : '';
+}
+
+function showCommTab(tab, btn) {
+  document.querySelectorAll('.comm-tab').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.comm-tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('commTab-' + tab).style.display = '';
+  btn.classList.add('active');
+}
+
+function loadEmailTemplate(pk) {
+  if (!pk) return;
+  const sel = document.getElementById('emailTemplateSelect');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('emailBody').value = opt.dataset.body || '';
+  const subjField = document.querySelector('[name="email_subject"]');
+  if (subjField) subjField.value = opt.dataset.subject || '';
+}
+
+function loadSmsTemplate(pk) {
+  if (!pk) return;
+  const sel = document.getElementById('smsTemplateSelect');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('smsBody').value = opt.dataset.body || '';
+  updateSmsCount();
+}
+
+function updateSmsCount() {
+  const body = document.getElementById('smsBody');
+  if (body) {
+    const len = body.value.length;
+    const el  = document.getElementById('smsCharCount');
+    if (el) el.textContent = len + ' character' + (len !== 1 ? 's' : '') + (len > 160 ? ' (' + Math.ceil(len/160) + ' segments)' : '');
+    if (el) el.style.color = len > 160 ? 'var(--red-600)' : 'var(--text-muted)';
+  }
+}
+
+const smsBody = document.getElementById('smsBody');
+if (smsBody) smsBody.addEventListener('input', updateSmsCount);
+
+function toggleQuickTask() {
+  const panel   = document.getElementById('quickTaskPanel');
+  const chevron = document.getElementById('qtChevron');
+  const open    = panel.style.display === 'none';
+  panel.style.display   = open ? '' : 'none';
+  chevron.className     = open ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+  if (open) {
+    const today = new Date().toISOString().split('T')[0];
+    const dateField = panel.querySelector('[name="due_date"]');
+    if (dateField && !dateField.value) dateField.value = today;
+    panel.querySelector('[name="title"]').focus();
+  }
+}
+</script>
+
+{% endblock %}

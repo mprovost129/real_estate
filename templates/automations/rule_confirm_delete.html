@@ -1,0 +1,19 @@
+{% extends "base_app.html" %}
+
+{% block title %}Delete Rule{% endblock %}
+{% block page_title %}Delete Automation Rule{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+  <div class="card-body">
+    <p style="margin-bottom:1rem;">
+      Delete automation rule <strong>{{ rule.name }}</strong>?
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      <a href="{% url 'automations:list' %}" class="btn btn-ghost btn-sm">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

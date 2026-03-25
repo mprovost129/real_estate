@@ -1,0 +1,121 @@
+{% extends "base_app.html" %}
+
+{% block title %}Open Houses{% endblock %}
+{% block page_title %}Open Houses{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'open_houses:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Open House
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Tabs -->
+<div style="display:flex;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border-muted);padding-bottom:0;">
+  <a href="?tab=upcoming" class="tab-link {% if tab == 'upcoming' %}active{% endif %}">
+    Upcoming
+    {% if count_upcoming %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_upcoming }}</span>{% endif %}
+  </a>
+  <a href="?tab=past" class="tab-link {% if tab == 'past' %}active{% endif %}">
+    Past
+    {% if count_past %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_past }}</span>{% endif %}
+  </a>
+</div>
+
+{% if open_houses %}
+<div class="row g-3">
+  {% for oh in open_houses %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="card" style="height:100%;">
+      <div class="card-body" style="padding:1.125rem;">
+
+        <!-- Status badge + type -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          {% if oh.status == "active" %}
+            <span class="badge badge-green">Active</span>
+          {% elif oh.status == "completed" %}
+            <span class="badge badge-blue">Completed</span>
+          {% elif oh.status == "cancelled" %}
+            <span class="badge badge-red">Cancelled</span>
+          {% else %}
+            <span class="badge badge-gray">Scheduled</span>
+          {% endif %}
+          <span style="font-size:.75rem;color:var(--text-muted);">{{ oh.get_event_type_display }}</span>
+        </div>
+
+        <!-- Title / address -->
+        <a href="{% url 'open_houses:detail' oh.pk %}"
+           style="font-weight:600;font-size:.9375rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:.25rem;">
+          {{ oh.display_title }}
+        </a>
+        {% if oh.listing %}
+          <div style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.625rem;">
+            {{ oh.listing.city }}, {{ oh.listing.state }}
+          </div>
+        {% elif oh.city %}
+          <div style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.625rem;">
+            {{ oh.city }}, {{ oh.state }}
+          </div>
+        {% endif %}
+
+        <!-- Date + time -->
+        <div style="display:flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--text-secondary);margin-bottom:.5rem;">
+          <i class="bi bi-calendar3" style="color:var(--brand-500);"></i>
+          {{ oh.date }}
+          &nbsp;·&nbsp;
+          <i class="bi bi-clock"></i>
+          {{ oh.start_time|time:"g:i A" }} – {{ oh.end_time|time:"g:i A" }}
+        </div>
+
+        <!-- Visitor count + host -->
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.8125rem;">
+          <span style="color:var(--text-secondary);">
+            <i class="bi bi-people me-1"></i>
+            {{ oh.visitor_count }} visitor{{ oh.visitor_count|pluralize }}
+          </span>
+          {% if oh.host %}
+          <span style="color:var(--text-muted);">{{ oh.host.full_name }}</span>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div style="display:flex;justify-content:center;gap:.5rem;margin-top:1.25rem;">
+  {% if page_obj.has_previous %}
+    <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}" class="btn btn-ghost btn-sm">← Prev</a>
+  {% endif %}
+  {% if page_obj.has_next %}
+    <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}" class="btn btn-ghost btn-sm">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card" style="padding:3rem;text-align:center;color:var(--text-muted);">
+  <i class="bi bi-house-heart" style="font-size:2rem;display:block;margin-bottom:.75rem;"></i>
+  {% if tab == "upcoming" %}
+    No upcoming open houses.
+    <a href="{% url 'open_houses:create' %}" style="color:var(--text-link);">Schedule one now.</a>
+  {% else %}
+    No past open houses recorded.
+  {% endif %}
+</div>
+{% endif %}
+
+<style>
+.tab-link {
+  display: inline-flex; align-items: center; padding: .5rem .875rem;
+  font-size: .8125rem; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab-link:hover { color: var(--text-primary); }
+.tab-link.active { color: var(--brand-600); border-bottom-color: var(--brand-500); }
+</style>
+
+{% endblock %}

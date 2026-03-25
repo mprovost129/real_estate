@@ -1,0 +1,153 @@
+{% extends "reports/base_reports.html" %}
+
+{% block title %}Reports — Contacts{% endblock %}
+
+{% block report_content %}
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Total Contacts</div>
+      <div class="metric-value">{{ total }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+  <!-- Contact growth chart (monthly) -->
+  <div class="col-12 col-xl-8">
+    <div class="chart-card">
+      <div class="chart-title">New contacts — last 12 months</div>
+      <canvas id="monthlyChart" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- By source -->
+  <div class="col-12 col-xl-4">
+    <div class="chart-card" style="height:100%;">
+      <div class="chart-title">By lead source</div>
+      {% if by_source %}
+        {% with max_count=by_source.0.count %}
+        {% for item in by_source %}
+        <div class="bar-row">
+          <span class="bar-label" title="{{ item.label }}">{{ item.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{% widthratio item.count max_count 100 %}%;"></div>
+          </div>
+          <span class="bar-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3">
+
+  <!-- By contact type -->
+  <div class="col-12 col-lg-5">
+    <div class="chart-card">
+      <div class="chart-title">By contact type</div>
+      {% if by_type %}
+        <canvas id="typeChart" height="220"></canvas>
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- By agent -->
+  <div class="col-12 col-lg-7">
+    <div class="chart-card">
+      <div class="chart-title">By assigned agent</div>
+      {% if by_agent %}
+      <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <th style="padding:.4rem .5rem;text-align:left;color:var(--text-muted);font-weight:600;">Agent</th>
+            <th style="padding:.4rem .5rem;text-align:right;color:var(--text-muted);font-weight:600;">Contacts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in by_agent %}
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.5rem .5rem;color:var(--text-secondary);">
+              {% if row.assigned_to__first_name %}
+                {{ row.assigned_to__first_name }} {{ row.assigned_to__last_name }}
+              {% else %}
+                <span style="color:var(--text-muted);">Unassigned</span>
+              {% endif %}
+            </td>
+            <td style="padding:.5rem .5rem;text-align:right;font-weight:600;">{{ row.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No data yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Monthly growth chart
+const monthlyLabels  = [{% for m in monthly %}"{{ m.label }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const monthlyCounts  = [{% for m in monthly %}{{ m.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+new Chart(document.getElementById("monthlyChart"), {
+  type: "bar",
+  data: {
+    labels: monthlyLabels,
+    datasets: [{
+      label: "New contacts",
+      data: monthlyCounts,
+      backgroundColor: "rgba(99,102,241,.7)",
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { precision: 0 } }
+    }
+  }
+});
+
+// Type doughnut
+{% if by_type %}
+const typeLabels = [{% for t in by_type %}"{{ t.label }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const typeCounts = [{% for t in by_type %}{{ t.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+const COLORS = ["#6366f1","#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#84cc16","#06b6d4","#a855f7","#f43f5e"];
+
+new Chart(document.getElementById("typeChart"), {
+  type: "doughnut",
+  data: {
+    labels: typeLabels,
+    datasets: [{
+      data: typeCounts,
+      backgroundColor: COLORS.slice(0, typeLabels.length),
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: "right", labels: { font: { size: 11 } } }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

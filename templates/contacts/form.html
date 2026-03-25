@@ -1,0 +1,137 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ action }}{% endblock %}
+{% block page_title %}{{ action }}{% endblock %}
+
+{% block content %}
+
+<div style="max-width:760px;">
+
+  {# Breadcrumb #}
+  <nav style="font-size:.75rem;color:var(--text-muted);margin-bottom:1rem;">
+    <a href="{% url 'contacts:list' %}" style="color:var(--text-muted);">Contacts</a>
+    {% if object %}
+      <span style="margin:0 .375rem;">/</span>
+      <a href="{% url 'contacts:detail' object.pk %}" style="color:var(--text-muted);">{{ object.full_name }}</a>
+    {% endif %}
+    <span style="margin:0 .375rem;">/</span>
+    <span style="color:var(--text-primary);">{{ action }}</span>
+  </nav>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="flash flash-error mb-3">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {# ── Identity ───────────────────────────────────────────────── #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">Identity</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% include "contacts/_form_field.html" with field=form.first_name col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.last_name col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.preferred_name col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.date_of_birth col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.home_anniversary col="col-md-6" %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Contact info ──────────────────────────────────────────── #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">Contact Info</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% include "contacts/_form_field.html" with field=form.primary_email col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.primary_phone col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.address col="col-12" %}
+          {% include "contacts/_form_field.html" with field=form.city col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.state col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.zip_code col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.preferred_contact_method col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.timezone col="col-md-6" %}
+        </div>
+      </div>
+    </div>
+
+    {# ── CRM ──────────────────────────────────────────────────── #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">CRM Classification</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% include "contacts/_form_field.html" with field=form.contact_type col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.source col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.assigned_to col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.tags col="col-md-6" %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Real estate ──────────────────────────────────────────── #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">Real Estate Details</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% include "contacts/_form_field.html" with field=form.buyer_seller_type col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.financing_status col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.is_first_time_buyer col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.pre_approval_amount col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.price_min col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.price_max col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.desired_bedrooms_min col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.desired_bathrooms_min col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.desired_sqft_min col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.timeline_urgency col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.motivation_level col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.target_move_date col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.lender_name col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.preferred_areas col="col-12" %}
+          {% include "contacts/_form_field.html" with field=form.must_haves col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.deal_breakers col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.current_home_situation col="col-12" %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Personal ─────────────────────────────────────────────── #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title">Personal & Household</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% include "contacts/_form_field.html" with field=form.employer col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.profession col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.children_info col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.interests_hobbies col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.social_linkedin col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.social_facebook col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.social_instagram col="col-md-4" %}
+        </div>
+      </div>
+    </div>
+
+    {# ── Notes ────────────────────────────────────────────────── #}
+    <div class="card mb-4">
+      <div class="card-header"><span class="card-title">Quick Notes</span></div>
+      <div class="card-body">
+        {% include "contacts/_form_field.html" with field=form.notes col="col-12" %}
+      </div>
+    </div>
+
+    {# Save / Cancel #}
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> Save Contact
+      </button>
+      {% if object %}
+        <a href="{% url 'contacts:detail' object.pk %}" class="btn btn-secondary">Cancel</a>
+      {% else %}
+        <a href="{% url 'contacts:list' %}" class="btn btn-secondary">Cancel</a>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}

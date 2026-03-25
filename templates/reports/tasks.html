@@ -1,0 +1,191 @@
+{% extends "reports/base_reports.html" %}
+
+{% block title %}Reports — Tasks{% endblock %}
+
+{% block report_content %}
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Open Tasks</div>
+      <div class="metric-value">{{ pending }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card {% if overdue %}border-danger{% endif %}">
+      <div class="metric-label">Overdue</div>
+      <div class="metric-value" style="{% if overdue %}color:var(--color-danger);{% endif %}">{{ overdue }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Completed (30d)</div>
+      <div class="metric-value" style="color:var(--color-success);">{{ completed_month }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Completion rate</div>
+      <div class="metric-value">{{ completion_rate }}%</div>
+      <div class="metric-sub">{{ total_completed }} total completed</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+  <!-- Completion trend -->
+  <div class="col-12 col-xl-8">
+    <div class="chart-card">
+      <div class="chart-title">Tasks completed — last 8 weeks</div>
+      <canvas id="weeklyChart" height="80"></canvas>
+    </div>
+  </div>
+
+  <!-- Status breakdown -->
+  <div class="col-12 col-xl-4">
+    <div class="chart-card" style="height:100%;">
+      <div class="chart-title">Status breakdown</div>
+      {% if status_counts %}
+        {% with max_s=status_counts.0.count %}
+        {% for item in status_counts %}
+        <div class="bar-row">
+          <span class="bar-label">{{ item.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{% widthratio item.count max_s 100 %}%;
+                 background:{% if item.label == 'Completed' %}var(--color-success)
+                            {% elif item.label == 'Cancelled' %}var(--text-muted)
+                            {% else %}var(--brand-400){% endif %};"></div>
+          </div>
+          <span class="bar-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No tasks yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3">
+
+  <!-- By task type -->
+  <div class="col-12 col-lg-4">
+    <div class="chart-card">
+      <div class="chart-title">Open tasks by type</div>
+      {% if type_counts %}
+        {% with max_t=type_counts.0.count %}
+        {% for item in type_counts %}
+        <div class="bar-row">
+          <span class="bar-label">{{ item.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{% widthratio item.count max_t 100 %}%;"></div>
+          </div>
+          <span class="bar-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No open tasks.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- By priority -->
+  <div class="col-12 col-lg-4">
+    <div class="chart-card">
+      <div class="chart-title">Open tasks by priority</div>
+      {% if priority_counts %}
+        {% with max_p=priority_counts.0.count %}
+        {% for item in priority_counts %}
+        <div class="bar-row">
+          <span class="bar-label">{{ item.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill"
+                 style="width:{% widthratio item.count max_p 100 %}%;
+                        background:{% if item.label == 'Urgent' %}var(--color-danger)
+                                   {% elif item.label == 'High' %}var(--color-warning,#f59e0b)
+                                   {% elif item.label == 'Low' %}var(--text-muted)
+                                   {% else %}var(--brand-400){% endif %};"></div>
+          </div>
+          <span class="bar-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No open tasks.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- By agent -->
+  <div class="col-12 col-lg-4">
+    <div class="chart-card">
+      <div class="chart-title">Open tasks by agent</div>
+      {% if by_agent %}
+      <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <th style="padding:.375rem .25rem;text-align:left;color:var(--text-muted);font-weight:600;">Agent</th>
+            <th style="padding:.375rem .25rem;color:var(--text-muted);font-weight:600;text-align:right;">Open</th>
+            <th style="padding:.375rem .25rem;color:var(--color-danger);font-weight:600;text-align:right;">Overdue</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in by_agent %}
+          <tr style="border-bottom:1px solid var(--border-muted);">
+            <td style="padding:.4rem .25rem;color:var(--text-secondary);">
+              {% if row.assigned_to__first_name %}
+                {{ row.assigned_to__first_name }} {{ row.assigned_to__last_name }}
+              {% else %}
+                <span style="color:var(--text-muted);">Unassigned</span>
+              {% endif %}
+            </td>
+            <td style="padding:.4rem .25rem;font-weight:600;text-align:right;">{{ row.total }}</td>
+            <td style="padding:.4rem .25rem;text-align:right;
+                       {% if row.overdue %}color:var(--color-danger);font-weight:600;{% else %}color:var(--text-muted);{% endif %}">
+              {{ row.overdue|default:"—" }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p style="color:var(--text-muted);font-size:.8125rem;">No open tasks.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const weeklyLabels = [{% for w in weekly_completions %}"{{ w.label }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const weeklyCounts = [{% for w in weekly_completions %}{{ w.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+new Chart(document.getElementById("weeklyChart"), {
+  type: "bar",
+  data: {
+    labels: weeklyLabels,
+    datasets: [{
+      label: "Completed",
+      data: weeklyCounts,
+      backgroundColor: "rgba(16,185,129,.75)",
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { precision: 0 } }
+    }
+  }
+});
+</script>
+{% endblock %}

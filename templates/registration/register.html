@@ -1,0 +1,93 @@
+{% extends "base_auth.html" %}
+{% block title %}Create account{% endblock %}
+
+{% block card %}
+<h2 class="text-xl font-semibold mb-1">Create your account</h2>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Free to start. No credit card required.</p>
+
+<form method="post" novalidate class="space-y-4">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="px-4 py-3 rounded-lg bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300 text-sm">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Name row -->
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium mb-1">First name</label>
+      {{ form.first_name }}
+      {% if form.first_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.first_name.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium mb-1">Last name</label>
+      {{ form.last_name }}
+      {% if form.last_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.last_name.errors.0 }}</p>{% endif %}
+    </div>
+  </div>
+
+  <!-- Email -->
+  <div>
+    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium mb-1">Email</label>
+    {{ form.email }}
+    {% if form.email.errors %}<p class="mt-1 text-xs text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+  </div>
+
+  <!-- Passwords -->
+  <div>
+    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium mb-1">Password</label>
+    {{ form.password1 }}
+    {% if form.password1.errors %}<p class="mt-1 text-xs text-red-600">{{ form.password1.errors.0 }}</p>{% endif %}
+  </div>
+  <div>
+    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium mb-1">Confirm password</label>
+    {{ form.password2 }}
+    {% if form.password2.errors %}<p class="mt-1 text-xs text-red-600">{{ form.password2.errors.0 }}</p>{% endif %}
+  </div>
+
+  <!-- Divider -->
+  <div class="relative py-2">
+    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
+    <div class="relative flex justify-center"><span class="px-3 bg-white dark:bg-gray-900 text-xs text-gray-400">About your business</span></div>
+  </div>
+
+  <!-- Org name -->
+  <div>
+    <label for="{{ form.org_name.id_for_label }}" class="block text-sm font-medium mb-1">Business / team name</label>
+    {{ form.org_name }}
+    {% if form.org_name.errors %}<p class="mt-1 text-xs text-red-600">{{ form.org_name.errors.0 }}</p>{% endif %}
+  </div>
+
+  <!-- Org type -->
+  <div>
+    <label for="{{ form.org_type.id_for_label }}" class="block text-sm font-medium mb-1">I am a</label>
+    {{ form.org_type }}
+    {% if form.org_type.errors %}<p class="mt-1 text-xs text-red-600">{{ form.org_type.errors.0 }}</p>{% endif %}
+  </div>
+
+  <button type="submit"
+    class="w-full py-2.5 px-4 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition mt-2">
+    Create account
+  </button>
+</form>
+
+<p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+  Already have an account?
+  <a href="{% url 'login' %}" class="text-brand-600 hover:underline font-medium">Sign in</a>
+</p>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  input[type=email], input[type=password], input[type=text], select {
+    display: block; width: 100%; padding: .5rem .75rem;
+    border: 1px solid #d1d5db; border-radius: .5rem; font-size: .875rem;
+    background: white; outline: none; transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+  .dark input, .dark select { background: #111827; border-color: #374151; color: #f9fafb; }
+  .dark input:focus, .dark select:focus { border-color: #818cf8; }
+</style>
+{% endblock %}

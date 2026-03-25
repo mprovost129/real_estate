@@ -1,0 +1,108 @@
+{% extends "base_app.html" %}
+
+{% block title %}Test Automation Rules{% endblock %}
+{% block page_title %}Test Automation Rules{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'automations:list' %}" class="btn btn-ghost btn-sm">Back to Rules</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  <div class="col-12 col-xl-5">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-play-circle me-1"></i> Dry Run Inputs</span>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div style="margin-bottom:.75rem;">
+            <label class="label" for="{{ form.trigger_type.id_for_label }}">Trigger</label>
+            {{ form.trigger_type }}
+            {% for err in form.trigger_type.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <label class="label" for="{{ form.source.id_for_label }}">Source (optional)</label>
+            {{ form.source }}
+            <div class="helper">{{ form.source.help_text }}</div>
+            {% for err in form.source.errors %}<div class="field-error">{{ err }}</div>{% endfor %}
+          </div>
+
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="label" for="{{ form.contact_id.id_for_label }}">Contact ID</label>
+              {{ form.contact_id }}
+            </div>
+            <div class="col-6">
+              <label class="label" for="{{ form.deal_id.id_for_label }}">Deal ID</label>
+              {{ form.deal_id }}
+            </div>
+            <div class="col-6">
+              <label class="label" for="{{ form.task_id.id_for_label }}">Task ID</label>
+              {{ form.task_id }}
+            </div>
+            <div class="col-6">
+              <label class="label" for="{{ form.to_stage_id.id_for_label }}">To Stage ID</label>
+              {{ form.to_stage_id }}
+            </div>
+          </div>
+
+          <div style="margin-top:1rem;">
+            <button type="submit" class="btn btn-primary btn-sm">Run Dry Test</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if context_preview %}
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-braces me-1"></i> Context Preview</span>
+      </div>
+      <div class="card-body">
+        <pre style="margin:0;white-space:pre-wrap;font-size:.75rem;">{{ context_preview }}</pre>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-12 col-xl-7">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-lightning-charge me-1"></i> Rule Matches</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if results %}
+          {% for item in results %}
+            <div style="padding:.75rem 0;border-bottom:1px solid var(--border-muted);">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+                <div style="font-weight:600;">{{ item.name }}</div>
+                {% if item.matched %}
+                  <span class="badge" style="background:#dcfce7;color:#166534;">Will Run</span>
+                {% else %}
+                  <span class="badge" style="background:#f3f4f6;color:#374151;">Skipped</span>
+                {% endif %}
+              </div>
+              <div style="font-size:.8rem;color:var(--text-muted);margin-top:.15rem;">{{ item.reason }}</div>
+              <div style="margin-top:.35rem;">
+                <div style="font-size:.75rem;color:var(--text-secondary);">Actions:</div>
+                <pre style="white-space:pre-wrap;font-size:.72rem;margin:.2rem 0 0;">{{ item.actions }}</pre>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);">
+            <i class="bi bi-search" style="font-size:1.3rem;display:block;margin-bottom:.5rem;"></i>
+            Submit a dry-run to preview rule matches.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

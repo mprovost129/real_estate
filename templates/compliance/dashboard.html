@@ -1,0 +1,145 @@
+{% extends "base_app.html" %}
+
+{% block title %}Compliance{% endblock %}
+{% block page_title %}Compliance{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-xl-4">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-shield-check me-1"></i>Retention Policy</span>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <label class="form-label">Audit retention days</label>
+          {{ form.audit_retention_days }}
+          {% if form.audit_retention_days.errors %}<div class="form-error">{{ form.audit_retention_days.errors.0 }}</div>{% endif %}
+
+          <div class="form-check" style="margin-top:.75rem;">
+            {{ form.purge_enabled }}
+            <label class="form-check-label" for="{{ form.purge_enabled.id_for_label }}">Enable automated purge command</label>
+          </div>
+          <div style="margin-top:.75rem;">
+            <button type="submit" class="btn btn-primary btn-sm">Save Policy</button>
+          </div>
+        </form>
+        <div style="font-size:.75rem;color:var(--text-muted);margin-top:.75rem;">
+          Last purged: {% if policy.last_purged_at %}{{ policy.last_purged_at|date:"M j, Y H:i" }}{% else %}Never{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-graph-up me-1"></i>Audit Metrics</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Last 24h</span><strong>{{ counts.last_24h }}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Last 7d</span><strong>{{ counts.last_7d }}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Last 30d</span><strong>{{ counts.last_30d }}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Critical (30d)</span><strong style="color:var(--color-danger);">{{ counts.critical_30d }}</strong></div>
+        <form method="get" action="{% url 'compliance:export_audit_csv' %}" style="margin-top:.8rem;display:flex;gap:.35rem;flex-wrap:wrap;">
+          <input type="date" name="from" class="input" style="max-width:150px;">
+          <input type="date" name="to" class="input" style="max-width:150px;">
+          <button type="submit" class="btn btn-ghost btn-sm">Export CSV</button>
+          <button type="submit" formaction="{% url 'compliance:export_audit_package' %}" class="btn btn-ghost btn-sm">Export Signed ZIP</button>
+          <button type="submit" formaction="{% url 'compliance:export_audit_package' %}?include_pdf=1" class="btn btn-ghost btn-sm">Export ZIP + PDF</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-clock-history me-1"></i>Retention Monitor</span>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Purge enabled</span><strong>{% if monitor_status.purge_enabled %}Yes{% else %}No{% endif %}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Purgeable now</span><strong>{{ monitor_status.purgeable_now }}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Days since last purge</span><strong>{% if monitor_status.has_last_purge %}{{ monitor_status.days_since_last_purge }}{% else %}Never{% endif %}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;"><span>Recommended cadence</span><strong>Every {{ monitor_status.recommended_interval_days }}d</strong></div>
+        {% if monitor_status.is_stale %}
+          <div style="margin-top:.5rem;font-size:.75rem;color:var(--color-danger);">Retention purge appears stale. Run `manage.py purge_audit_events` and schedule it.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-8">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-journal-text me-1"></i>Recent Audit Events</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1rem;">
+        {% for event in events_page %}
+          <div style="padding:.55rem 0;border-bottom:1px solid var(--border-muted);">
+            <div style="display:flex;justify-content:space-between;gap:.75rem;">
+              <div style="font-size:.8125rem;">
+                <strong>{{ event.action }}</strong>
+                {% if event.entity_type %}<span style="color:var(--text-muted);"> - {{ event.entity_type }} {{ event.entity_id }}</span>{% endif %}
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ event.created_at|timesince }} ago</div>
+            </div>
+            <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.15rem;">
+              {% if event.actor %}{{ event.actor.full_name|default:event.actor.email }}{% else %}System{% endif %}
+              {% if event.message %} - {{ event.message|truncatechars:120 }}{% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No audit events yet.</div>
+        {% endfor %}
+
+        {% if events_page.paginator.num_pages > 1 %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.75rem;">
+            <div style="font-size:.75rem;color:var(--text-muted);">Page {{ events_page.number }} of {{ events_page.paginator.num_pages }}</div>
+            <div style="display:flex;gap:.35rem;">
+              {% if events_page.has_previous %}
+                <a class="btn btn-ghost btn-sm" href="?page={{ events_page.previous_page_number }}">Prev</a>
+              {% endif %}
+              {% if events_page.has_next %}
+                <a class="btn btn-ghost btn-sm" href="?page={{ events_page.next_page_number }}">Next</a>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if top_actions %}
+      <div class="card mt-3">
+        <div class="card-header">
+          <span class="card-title"><i class="bi bi-bar-chart me-1"></i>Top Actions (30d)</span>
+        </div>
+        <div class="card-body">
+          {% for row in top_actions %}
+            <div style="display:flex;justify-content:space-between;padding:.25rem 0;border-bottom:1px solid var(--border-subtle);">
+              <span style="font-size:.8125rem;">{{ row.action }}</span>
+              <strong style="font-size:.8125rem;">{{ row.count }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if recent_exports %}
+      <div class="card mt-3">
+        <div class="card-header">
+          <span class="card-title"><i class="bi bi-file-earmark-arrow-down me-1"></i>Recent Exports</span>
+        </div>
+        <div class="card-body">
+          {% for ex in recent_exports %}
+            <div style="padding:.35rem 0;border-bottom:1px solid var(--border-subtle);">
+              <div style="font-size:.8125rem;"><strong>{{ ex.file_name }}</strong> <span style="color:var(--text-muted);">({{ ex.export_format|upper }})</span></div>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ ex.created_at|date:"M j, Y H:i" }} - {{ ex.row_count }} rows - SHA256 {{ ex.sha256|slice:":12" }}...
+                {% if ex.signature %} - SIG {{ ex.signature|slice:":12" }}...{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

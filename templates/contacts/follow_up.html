@@ -1,0 +1,320 @@
+{% extends "base_app.html" %}
+
+{% block title %}Follow-up Center{% endblock %}
+{% block page_title %}Follow-up Center{% endblock %}
+
+{% block topbar_actions %}
+  <form method="post" action="{% url 'contacts:generate_reminders' %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-ghost btn-sm">
+      <i class="bi bi-bell me-1"></i>Generate Reminders
+    </button>
+  </form>
+  <a href="{% url 'contacts:list' %}" class="btn btn-ghost btn-sm">All Contacts</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Summary row ── #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="cursor:pointer;" onclick="scrollTo('no-next-step')">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">No Next Step</div>
+          <div class="stat-value {% if no_next_step %}text-danger{% endif %}">{{ no_next_step|length }}</div>
+          <div class="stat-sub">need a task assigned</div>
+        </div>
+        <div class="stat-icon" style="background:var(--red-50,#fef2f2);">
+          <i class="bi bi-exclamation-circle-fill" style="color:var(--red-500,#ef4444);font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="cursor:pointer;" onclick="scrollTo('going-cold')">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Going Cold</div>
+          <div class="stat-value {% if going_cold %}text-warning{% endif %}">{{ going_cold|length }}</div>
+          <div class="stat-sub">no recent activity</div>
+        </div>
+        <div class="stat-icon" style="background:#fffbeb;">
+          <i class="bi bi-thermometer-low" style="color:#d97706;font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="cursor:pointer;" onclick="scrollTo('birthdays')">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Birthdays</div>
+          <div class="stat-value">{{ upcoming_birthdays|length }}</div>
+          <div class="stat-sub">in the next 30 days</div>
+        </div>
+        <div class="stat-icon" style="background:#fdf4ff;">
+          <i class="bi bi-cake2-fill" style="color:#a21caf;font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card" style="cursor:pointer;" onclick="scrollTo('anniversaries')">
+      <div class="d-flex align-items-start justify-content-between">
+        <div>
+          <div class="stat-label">Anniversaries</div>
+          <div class="stat-value">{{ upcoming_anniversaries|length }}</div>
+          <div class="stat-sub">home anniversaries</div>
+        </div>
+        <div class="stat-icon" style="background:#f0fdf4;">
+          <i class="bi bi-house-heart-fill" style="color:#16a34a;font-size:1.125rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+
+    {# ── No Next Step ── #}
+    <div class="card mb-3" id="no-next-step">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--red-600,#dc2626);">
+          <i class="bi bi-exclamation-circle-fill me-1"></i>No Next Step
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ no_next_step|length }} contacts</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if no_next_step %}
+          {% for contact in no_next_step %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+            <div style="display:flex;align-items:center;gap:.625rem;">
+              <div style="width:1.75rem;height:1.75rem;border-radius:9999px;background:var(--brand-500);
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:.625rem;font-weight:700;color:#fff;flex-shrink:0;">
+                {{ contact.first_name|first|upper }}{{ contact.last_name|first|upper }}
+              </div>
+              <div>
+                <a href="{% url 'contacts:detail' contact.pk %}"
+                   style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                  {{ contact.full_name }}
+                </a>
+                <div style="font-size:.75rem;color:var(--text-muted);">
+                  {{ contact.get_contact_type_display }}
+                  {% if contact.primary_phone %} · {{ contact.primary_phone }}{% endif %}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:.375rem;flex-shrink:0;">
+              {% if contact.primary_phone %}
+                <a href="tel:{{ contact.primary_phone }}" class="btn btn-ghost btn-sm" title="Call" style="padding:.2rem .4rem;">
+                  <i class="bi bi-telephone-fill" style="font-size:.75rem;color:var(--green-600,#16a34a);"></i>
+                </a>
+              {% endif %}
+              <a href="{% url 'contacts:detail' contact.pk %}" class="btn btn-ghost btn-sm" style="padding:.2rem .5rem;font-size:.75rem;">
+                View
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.875rem;">
+            <i class="bi bi-check-circle-fill" style="color:var(--brand-500);font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            All active contacts have a follow-up task.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Going Cold ── #}
+    <div class="card mb-3" id="going-cold">
+      <div class="card-header">
+        <span class="card-title" style="color:#d97706;">
+          <i class="bi bi-thermometer-low me-1"></i>Going Cold
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ going_cold|length }} contacts</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if going_cold %}
+          {% for item in going_cold %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+            <div style="display:flex;align-items:center;gap:.625rem;">
+              <div style="width:1.75rem;height:1.75rem;border-radius:9999px;background:var(--brand-500);
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:.625rem;font-weight:700;color:#fff;flex-shrink:0;">
+                {{ item.contact.first_name|first|upper }}{{ item.contact.last_name|first|upper }}
+              </div>
+              <div>
+                <a href="{% url 'contacts:detail' item.contact.pk %}"
+                   style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                  {{ item.contact.full_name }}
+                </a>
+                <div style="font-size:.75rem;color:var(--text-muted);">
+                  {{ item.contact.get_contact_type_display }}
+                  {% if item.days_inactive %}
+                    · <span style="{% if item.is_critical %}color:var(--red-600,#dc2626);{% else %}color:#d97706;{% endif %}font-weight:500;">
+                      {{ item.days_inactive }}d no activity
+                    </span>
+                  {% else %}
+                    · <span style="color:var(--red-600,#dc2626);font-weight:500;">Never contacted</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:.375rem;flex-shrink:0;">
+              {% if item.contact.primary_phone %}
+                <a href="tel:{{ item.contact.primary_phone }}" class="btn btn-ghost btn-sm" title="Call" style="padding:.2rem .4rem;">
+                  <i class="bi bi-telephone-fill" style="font-size:.75rem;color:var(--green-600,#16a34a);"></i>
+                </a>
+              {% endif %}
+              <a href="{% url 'contacts:detail' item.contact.pk %}" class="btn btn-ghost btn-sm" style="padding:.2rem .5rem;font-size:.75rem;">
+                View
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:.875rem;">
+            <i class="bi bi-fire" style="color:var(--brand-500);font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+            Database is warm — no stale contacts.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Open House Visitors Needing Follow-up ── #}
+    {% if unfollowed_visitors %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-house-door me-1" style="color:var(--brand-500);"></i>
+          Open House Follow-ups Needed
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ unfollowed_visitors|length }}</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for v in unfollowed_visitors %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <div>
+            <div style="font-size:.875rem;font-weight:600;color:var(--text-primary);">
+              {{ v.first_name }} {{ v.last_name }}
+            </div>
+            <div style="font-size:.75rem;color:var(--text-muted);">
+              {{ v.open_house.display_title }} · {{ v.signed_in_at|date:"M j" }}
+              {% if v.email %} · {{ v.email }}{% endif %}
+            </div>
+          </div>
+          <a href="{% url 'open_houses:detail' v.open_house.pk %}" class="btn btn-ghost btn-sm" style="font-size:.75rem;">
+            View OH
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-12 col-lg-5">
+
+    {# ── Upcoming Birthdays ── #}
+    <div class="card mb-3" id="birthdays">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-cake2-fill me-1" style="color:#a21caf;"></i>
+          Upcoming Birthdays
+        </span>
+        <form method="post" action="{% url 'contacts:generate_reminders' %}" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:.15rem .4rem;"
+                  title="Create reminder tasks for all upcoming birthdays & anniversaries">
+            <i class="bi bi-bell-fill me-1"></i>Create Tasks
+          </button>
+        </form>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if upcoming_birthdays %}
+          {% for item in upcoming_birthdays %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+            <div>
+              <a href="{% url 'contacts:detail' item.contact.pk %}"
+                 style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                {{ item.contact.full_name }}
+              </a>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ item.contact.get_contact_type_display }}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:.8125rem;font-weight:600;
+                          color:{% if item.days_until == 0 %}var(--red-600,#dc2626){% elif item.days_until <= 3 %}#d97706{% else %}var(--text-secondary){% endif %};">
+                {% if item.days_until == 0 %}Today!{% elif item.days_until == 1 %}Tomorrow{% else %}{{ item.days_until }}d{% endif %}
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ item.birthday|date:"M j" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.25rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            No birthdays in the next 30 days.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Upcoming Home Anniversaries ── #}
+    <div class="card mb-3" id="anniversaries">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-house-heart-fill me-1" style="color:#16a34a;"></i>
+          Home Anniversaries
+        </span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if upcoming_anniversaries %}
+          {% for item in upcoming_anniversaries %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+            <div>
+              <a href="{% url 'contacts:detail' item.contact.pk %}"
+                 style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                {{ item.contact.full_name }}
+              </a>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ item.years }} year{{ item.years|pluralize }} · {{ item.anniv_date|date:"M j" }}
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:.8125rem;font-weight:600;
+                          color:{% if item.days_until == 0 %}var(--red-600,#dc2626){% elif item.days_until <= 3 %}#d97706{% else %}var(--text-secondary){% endif %};">
+                {% if item.days_until == 0 %}Today!{% elif item.days_until == 1 %}Tomorrow{% else %}{{ item.days_until }}d{% endif %}
+              </div>
+              <div style="font-size:.75rem;color:var(--text-muted);">{{ item.anniv_date|date:"M j, Y" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1.25rem 0;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+            No anniversaries in the next 30 days.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function scrollTo(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+
+{% endblock %}

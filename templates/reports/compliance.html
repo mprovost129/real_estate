@@ -1,0 +1,67 @@
+{% extends "reports/base_reports.html" %}
+
+{% block title %}Reports - Compliance{% endblock %}
+
+{% block report_content %}
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-label">Audit Events (7d)</div>
+      <div class="metric-value">{{ count_7d }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-label">Audit Events (30d)</div>
+      <div class="metric-value">{{ count_30d }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="metric-card">
+      <div class="metric-label">Critical Events (30d)</div>
+      <div class="metric-value" style="color:var(--color-danger);">{{ critical_30d }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-8">
+    <div class="chart-card">
+      <div class="chart-title">Recent Audit Events</div>
+      {% for event in events %}
+        <div style="padding:.55rem 0;border-bottom:1px solid var(--border-muted);">
+          <div style="display:flex;justify-content:space-between;gap:.5rem;">
+            <div style="font-size:.8125rem;">
+              <strong>{{ event.action }}</strong>
+              {% if event.entity_type %}
+                <span style="color:var(--text-muted);"> - {{ event.entity_type }} {{ event.entity_id }}</span>
+              {% endif %}
+            </div>
+            <div style="font-size:.75rem;color:var(--text-muted);">{{ event.created_at|timesince }} ago</div>
+          </div>
+          <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.15rem;">
+            {% if event.actor %}{{ event.actor.full_name|default:event.actor.email }}{% else %}System{% endif %}
+            {% if event.message %} - {{ event.message|truncatechars:120 }}{% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:var(--text-muted);margin:0;">No audit events yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <div class="chart-card">
+      <div class="chart-title">Top Actions (30d)</div>
+      {% for row in top_actions %}
+        <div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-size:.8125rem;">{{ row.action }}</span>
+          <strong style="font-size:.8125rem;">{{ row.count }}</strong>
+        </div>
+      {% empty %}
+        <p style="color:var(--text-muted);margin:0;">No activity.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

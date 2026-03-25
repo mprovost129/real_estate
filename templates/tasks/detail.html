@@ -1,0 +1,237 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{{ task.title }}{% endblock %}
+{% block page_title %}Task Detail{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'tasks:update' task.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <a href="{% url 'tasks:list' %}" class="btn btn-ghost btn-sm">← Back to Tasks</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+  <!-- ── Left column: task info ── -->
+  <div class="col-12 col-xl-7">
+
+    <!-- Title card -->
+    <div class="card mb-3">
+      <div class="card-body" style="padding:1.25rem;">
+
+        <div class="d-flex align-items-start gap-3">
+
+          <!-- Priority indicator -->
+          <div style="margin-top:.25rem;">
+            <div class="priority-dot {{ task.priority }}" style="width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
+          </div>
+
+          <div style="flex:1;min-width:0;">
+            <h2 style="font-size:1.125rem;font-weight:600;margin:0 0 .5rem;color:var(--text-primary);">
+              {{ task.title }}
+            </h2>
+
+            <!-- Status badge -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              {% if task.status == "completed" %}
+                <span class="badge badge-green">Completed</span>
+              {% elif task.status == "snoozed" %}
+                <span class="badge badge-yellow">Snoozed</span>
+              {% elif task.status == "cancelled" %}
+                <span class="badge badge-gray">Cancelled</span>
+              {% elif task.is_overdue %}
+                <span class="badge badge-red">Overdue</span>
+              {% else %}
+                <span class="badge badge-blue">{{ task.get_status_display }}</span>
+              {% endif %}
+
+              <span class="badge badge-gray">{{ task.get_task_type_display }}</span>
+
+              {% if task.priority == "urgent" %}
+                <span class="badge badge-red">Urgent</span>
+              {% elif task.priority == "high" %}
+                <span class="badge badge-yellow">High</span>
+              {% elif task.priority == "low" %}
+                <span class="badge badge-gray" style="opacity:.7;">Low</span>
+              {% else %}
+                <span class="badge badge-gray">Normal</span>
+              {% endif %}
+
+              {% if task.recurrence != "none" %}
+                <span class="badge badge-blue">
+                  <i class="bi bi-arrow-repeat"></i> {{ task.get_recurrence_display }}
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- Description -->
+            {% if task.description %}
+            <p style="color:var(--text-secondary);margin:0 0 1rem;font-size:.875rem;">{{ task.description }}</p>
+            {% endif %}
+
+            <!-- Meta grid -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.75rem;font-size:.8125rem;">
+
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Due</div>
+                <div style="font-weight:500;{% if task.is_overdue %}color:var(--color-danger);{% endif %}">
+                  {{ task.due_date }}
+                  {% if task.due_time %} at {{ task.due_time|time:"g:i A" }}{% endif %}
+                </div>
+              </div>
+
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Assigned to</div>
+                <div>{{ task.assigned_to.full_name|default:"Unassigned" }}</div>
+              </div>
+
+              {% if task.assigned_by %}
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Created by</div>
+                <div>{{ task.assigned_by.full_name }}</div>
+              </div>
+              {% endif %}
+
+              {% if task.snooze_until %}
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Snoozed until</div>
+                <div>{{ task.snooze_until|date:"M j, Y g:i A" }}</div>
+              </div>
+              {% endif %}
+
+              {% if task.completed_at %}
+              <div>
+                <div style="color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.2rem;">Completed</div>
+                <div>{{ task.completed_at|date:"M j, Y g:i A" }} by {{ task.completed_by.full_name|default:"?" }}</div>
+              </div>
+              {% endif %}
+
+            </div>
+
+            {% if task.outcome %}
+            <div style="margin-top:1rem;padding:.75rem;background:var(--bg-subtle);border-radius:.5rem;border-left:3px solid var(--brand-400);">
+              <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.25rem;">Outcome</div>
+              <div style="font-size:.875rem;color:var(--text-secondary);">{{ task.outcome }}</div>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Linked records -->
+    {% if task.contact or task.deal %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Linked records</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+        {% if task.contact %}
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;{% if task.deal %}border-bottom:1px solid var(--border-muted);{% endif %}">
+          <i class="bi bi-person-fill" style="color:var(--brand-500);"></i>
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);">Contact</div>
+            <a href="{% url 'contacts:detail' task.contact.pk %}" style="color:var(--text-link);font-weight:500;">
+              {{ task.contact.full_name }}
+            </a>
+          </div>
+        </div>
+        {% endif %}
+        {% if task.deal %}
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;">
+          <i class="bi bi-funnel-fill" style="color:var(--brand-500);"></i>
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);">Deal</div>
+            <a href="{% url 'pipelines:deal_detail' task.deal.pk %}" style="color:var(--text-link);font-weight:500;">
+              {{ task.deal.contact.full_name }} — {{ task.deal.pipeline.name }}
+            </a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ── Right column: actions ── -->
+  <div class="col-12 col-xl-5">
+
+    {% if task.status != "completed" and task.status != "cancelled" %}
+
+    <!-- Mark complete -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-check-circle me-1" style="color:var(--color-success);"></i>
+          Mark Complete
+        </span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;">
+        <form method="post" action="{% url 'tasks:complete' task.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'tasks:detail' task.pk %}">
+          <div class="mb-3">
+            <label style="font-size:.8125rem;font-weight:500;display:block;margin-bottom:.375rem;">
+              Outcome / notes (optional)
+            </label>
+            {{ complete_form.outcome }}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="background:var(--color-success);border-color:var(--color-success);">
+            <i class="bi bi-check-lg"></i> Complete Task
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Snooze -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-clock me-1" style="color:var(--text-muted);"></i>
+          Snooze
+        </span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;">
+        <form method="post" action="{% url 'tasks:snooze' task.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'tasks:detail' task.pk %}">
+          <div class="d-flex gap-2 align-items-end">
+            <div style="flex:1;">
+              {{ snooze_form.snooze_for }}
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">
+              <i class="bi bi-alarm"></i> Snooze
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% endif %}
+
+    <!-- Danger zone -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--color-danger);">Danger zone</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;">
+        <p style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.75rem;">
+          Permanently delete this task. This cannot be undone.
+        </p>
+        <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-sm"
+           style="background:var(--color-danger-bg);color:var(--color-danger);border:1px solid var(--color-danger);">
+          <i class="bi bi-trash3"></i> Delete Task
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{% endblock %}

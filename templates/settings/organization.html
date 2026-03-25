@@ -1,0 +1,156 @@
+{% extends "settings/base_settings.html" %}
+
+{% block title %}Organization Settings{% endblock %}
+
+{% block settings_content %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Organization settings</span>
+    <span style="font-size:.75rem;color:var(--text-muted);">{{ org.get_org_type_display }}</span>
+  </div>
+  <div class="card-body" style="padding:1.25rem;">
+
+    {% if not can_edit %}
+    <div class="flash flash-info" style="margin-bottom:1rem;">
+      You have read-only access. Only owners and admins can edit organization settings.
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="flash flash-danger mb-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <fieldset {% if not can_edit %}disabled{% endif %}>
+        <div style="display:flex;flex-direction:column;gap:1rem;max-width:560px;">
+
+          <!-- Identity -->
+          <div>
+            <label class="form-label">Organization name <span style="color:var(--color-danger);">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div>
+            <label class="form-label">Organization type</label>
+            {{ form.org_type }}
+          </div>
+
+          <div style="height:1px;background:var(--border-muted);"></div>
+
+          <!-- Contact -->
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Phone</label>
+              {{ form.phone }}
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Website</label>
+            {{ form.website }}
+          </div>
+
+          <div style="height:1px;background:var(--border-muted);"></div>
+
+          <!-- Address -->
+          <div>
+            <label class="form-label">Street address</label>
+            {{ form.address }}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">City</label>
+              {{ form.city }}
+            </div>
+            <div class="col-3">
+              <label class="form-label">State</label>
+              {{ form.state }}
+            </div>
+            <div class="col-3">
+              <label class="form-label">ZIP</label>
+              {{ form.zip_code }}
+            </div>
+          </div>
+
+          <div style="height:1px;background:var(--border-muted);"></div>
+
+          <!-- Logo -->
+          <div>
+            <label class="form-label">Logo</label>
+            {% if org.logo %}
+              <div style="margin-bottom:.5rem;">
+                <img src="{{ org.logo.url }}" alt="Logo"
+                     style="height:3rem;width:auto;border-radius:.375rem;border:1px solid var(--border-muted);">
+              </div>
+            {% endif %}
+            {{ form.logo }}
+            <div style="font-size:.75rem;color:var(--text-muted);margin-top:.25rem;">
+              Accepted: PNG, JPG, SVG. Max 2 MB.
+            </div>
+          </div>
+
+          {% if can_edit %}
+          <div>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+          {% endif %}
+
+        </div>
+      </fieldset>
+    </form>
+
+  </div>
+</div>
+
+<!-- Org info card -->
+<div class="card mt-3">
+  <div class="card-header">
+    <span class="card-title">Plan &amp; account</span>
+  </div>
+  <div class="card-body" style="padding:1rem 1.25rem;font-size:.8125rem;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;">
+      <div>
+        <div style="color:var(--text-muted);margin-bottom:.2rem;">Current plan</div>
+        <div style="font-weight:600;text-transform:capitalize;">{{ org.plan }}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-muted);margin-bottom:.2rem;">Created</div>
+        <div>{{ org.created_at|date:"M j, Y" }}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-muted);margin-bottom:.2rem;">Slug</div>
+        <div style="font-family:monospace;">{{ org.slug }}</div>
+      </div>
+      <div>
+        <div style="color:var(--text-muted);margin-bottom:.2rem;">Your role</div>
+        <div style="font-weight:600;">{{ membership.get_role_display }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.form-label {
+  display: block;
+  font-size: .8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: .375rem;
+}
+.form-error {
+  font-size: .75rem;
+  color: var(--color-danger);
+  margin-top: .25rem;
+}
+</style>
+
+{% endblock %}

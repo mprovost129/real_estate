@@ -1,0 +1,104 @@
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("organizations", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="AutomationRule",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=200)),
+                (
+                    "trigger_type",
+                    models.CharField(
+                        choices=[
+                            ("lead_created", "Lead Created"),
+                            ("deal_stage_changed", "Deal Stage Changed"),
+                            ("task_overdue", "Task Overdue"),
+                        ],
+                        max_length=30,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("conditions", models.JSONField(blank=True, default=dict)),
+                ("actions", models.JSONField(blank=True, default=list)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="created_automation_rules",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="automations_automationrule_set",
+                        to="organizations.organization",
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["name"],
+            },
+        ),
+        migrations.CreateModel(
+            name="AutomationRun",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("trigger_type", models.CharField(max_length=30)),
+                (
+                    "object_ref",
+                    models.CharField(
+                        blank=True,
+                        help_text="Entity reference, e.g. contact:12, deal:45, task:99:2026-03-24",
+                        max_length=120,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("success", "Success"), ("skipped", "Skipped"), ("failed", "Failed")],
+                        default="success",
+                        max_length=10,
+                    ),
+                ),
+                ("message", models.TextField(blank=True)),
+                (
+                    "organization",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="automations_automationrun_set",
+                        to="organizations.organization",
+                    ),
+                ),
+                (
+                    "rule",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="runs",
+                        to="automations.automationrule",
+                    ),
+                ),
+            ],
+            options={
+                "ordering": ["-created_at"],
+            },
+        ),
+    ]

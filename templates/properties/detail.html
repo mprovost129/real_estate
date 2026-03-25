@@ -1,0 +1,503 @@
+{% extends "base_app.html" %}
+{% load static %}
+
+{% block title %}{{ prop.short_address }}{% endblock %}
+{% block page_title %}Property{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'properties:update' prop.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <a href="{% url 'properties:list' %}" class="btn btn-ghost btn-sm">← Properties</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+  <!-- ── Left: Main info ── -->
+  <div class="col-12 col-xl-8">
+
+    <!-- Header card -->
+    <div class="card mb-3">
+      <div class="card-body" style="padding:1.25rem;">
+
+        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+          <div>
+            <h2 style="font-size:1.25rem;font-weight:700;margin:0 0 .25rem;">{{ prop.short_address }}</h2>
+            <div style="color:var(--text-secondary);font-size:.875rem;">
+              {{ prop.city }}, {{ prop.state }} {{ prop.zip_code }}
+              {% if prop.county %} · {{ prop.county }} County{% endif %}
+            </div>
+          </div>
+          <div style="flex-shrink:0;">
+            {% include "properties/_status_badge.html" with status=prop.status label=prop.get_status_display %}
+          </div>
+        </div>
+
+        <!-- Key stats row -->
+        <div style="display:flex;flex-wrap:wrap;gap:1.5rem;padding:.75rem 0;border-top:1px solid var(--border-muted);">
+
+          {% if prop.list_price %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">List Price</div>
+            <div style="font-size:1.25rem;font-weight:700;color:var(--brand-600);">${{ prop.list_price|floatformat:"0" }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.sold_price %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Sold Price</div>
+            <div style="font-size:1.25rem;font-weight:700;color:var(--color-success);">${{ prop.sold_price|floatformat:"0" }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.bedrooms %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Beds / Baths</div>
+            <div style="font-weight:600;">{{ prop.beds_baths }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.square_feet %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Square Feet</div>
+            <div style="font-weight:600;">{{ prop.square_feet|floatformat:"0" }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.year_built %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Year Built</div>
+            <div style="font-weight:600;">{{ prop.year_built }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.days_on_market is not None %}
+          <div>
+            <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Days on Market</div>
+            <div style="font-weight:600;">{{ prop.days_on_market }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Photo gallery ─────────────────────────────────────────── -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-images me-1" style="color:var(--brand-500);"></i>
+          Photos
+        </span>
+        <button type="button" onclick="toggleUploadPanel()"
+                class="btn btn-ghost btn-sm" style="font-size:.75rem;">
+          <i class="bi bi-plus-lg me-1"></i>Add Photos
+        </button>
+      </div>
+
+      {# Upload panel (hidden by default) #}
+      <div id="upload-panel" style="display:none;padding:.75rem 1.25rem;
+           border-bottom:1px solid var(--border-subtle);background:var(--bg-subtle);">
+        <form method="post" action="{% url 'properties:photo_upload' prop.pk %}"
+              enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+              <label style="font-size:.75rem;font-weight:600;color:var(--text-secondary);
+                             display:block;margin-bottom:.3rem;">
+                Select images
+              </label>
+              <input type="file" name="images" multiple accept="image/*"
+                     style="font-size:.8125rem;color:var(--text-secondary);">
+            </div>
+            <div>
+              <label style="font-size:.75rem;font-weight:600;color:var(--text-secondary);
+                             display:block;margin-bottom:.3rem;">
+                Caption (optional)
+              </label>
+              <input type="text" name="caption" maxlength="200"
+                     class="input" style="width:220px;font-size:.8125rem;"
+                     placeholder="e.g. Kitchen, Living Room…">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-cloud-upload me-1"></i>Upload
+            </button>
+            <button type="button" onclick="toggleUploadPanel()"
+                    class="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+        </form>
+      </div>
+
+      {# Gallery grid #}
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+        {% if photos %}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;">
+          {% for photo in photos %}
+          <div style="position:relative;border-radius:8px;overflow:hidden;
+                      border:2px solid {% if photo.is_primary %}var(--brand-500){% else %}var(--border-subtle){% endif %};
+                      background:var(--bg-subtle);">
+
+            {# Photo image — click to open full size #}
+            <a href="{{ photo.image.url }}" target="_blank" rel="noopener">
+              <img src="{{ photo.image.url }}"
+                   alt="{{ photo.caption|default:prop.short_address }}"
+                   loading="lazy"
+                   style="width:100%;height:130px;object-fit:cover;display:block;">
+            </a>
+
+            {# Primary badge #}
+            {% if photo.is_primary %}
+            <span style="position:absolute;top:.35rem;left:.35rem;
+                         background:var(--brand-500);color:#fff;
+                         font-size:.6rem;font-weight:700;padding:.15rem .4rem;
+                         border-radius:4px;letter-spacing:.04em;">
+              COVER
+            </span>
+            {% endif %}
+
+            {# Caption + actions bar #}
+            <div style="padding:.4rem .5rem;background:var(--bg-card);">
+              <div style="font-size:.7rem;color:var(--text-muted);
+                           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                           margin-bottom:.3rem;"
+                   title="{{ photo.caption }}">
+                {{ photo.caption|default:"No caption" }}
+              </div>
+              <div style="display:flex;gap:.25rem;">
+                {% if not photo.is_primary %}
+                <form method="post"
+                      action="{% url 'properties:photo_set_primary' prop.pk photo.pk %}"
+                      style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm"
+                          title="Set as cover"
+                          style="padding:.15rem .35rem;font-size:.65rem;">
+                    <i class="bi bi-star"></i>
+                  </button>
+                </form>
+                {% else %}
+                <span style="display:inline-flex;align-items:center;
+                              padding:.15rem .35rem;font-size:.65rem;
+                              color:var(--brand-500);" title="Cover photo">
+                  <i class="bi bi-star-fill"></i>
+                </span>
+                {% endif %}
+
+                <button type="button"
+                        onclick="toggleCaptionForm('cap-{{ photo.pk }}')"
+                        class="btn btn-ghost btn-sm"
+                        title="Edit caption"
+                        style="padding:.15rem .35rem;font-size:.65rem;">
+                  <i class="bi bi-pencil"></i>
+                </button>
+
+                <form method="post"
+                      action="{% url 'properties:photo_delete' prop.pk photo.pk %}"
+                      style="display:inline;margin-left:auto;"
+                      onsubmit="return confirm('Delete this photo?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm"
+                          title="Delete"
+                          style="padding:.15rem .35rem;font-size:.65rem;">
+                    <i class="bi bi-trash" style="color:var(--red-500,#ef4444);"></i>
+                  </button>
+                </form>
+              </div>
+
+              {# Inline caption edit form #}
+              <div id="cap-{{ photo.pk }}" style="display:none;margin-top:.35rem;">
+                <form method="post"
+                      action="{% url 'properties:photo_caption' prop.pk photo.pk %}"
+                      class="d-flex gap-1">
+                  {% csrf_token %}
+                  <input type="text" name="caption" value="{{ photo.caption }}"
+                         maxlength="200"
+                         style="flex:1;font-size:.7rem;padding:.2rem .4rem;
+                                border-radius:4px;border:1px solid var(--border-base);
+                                background:var(--bg-card);color:var(--text-primary);">
+                  <button type="submit" class="btn btn-primary btn-sm"
+                          style="font-size:.65rem;padding:.2rem .4rem;">Save</button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% else %}
+        <div style="padding:2rem;text-align:center;color:var(--text-muted);">
+          <i class="bi bi-camera" style="font-size:2rem;display:block;margin-bottom:.625rem;"></i>
+          <p style="font-size:.875rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">No photos yet</p>
+          <p style="font-size:.8125rem;margin-bottom:1rem;">Upload photos to showcase this property.</p>
+          <button type="button" onclick="toggleUploadPanel()"
+                  class="btn btn-secondary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add Photos
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Property details</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.875rem;font-size:.8125rem;">
+
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Property Type</div>
+            <div>{{ prop.get_property_type_display }}</div>
+          </div>
+
+          {% if prop.mls_number %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">MLS #</div>
+            <div style="font-weight:500;">{{ prop.mls_number }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.neighborhood %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Neighborhood</div>
+            <div>{{ prop.neighborhood }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.school_district %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">School District</div>
+            <div>{{ prop.school_district }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.lot_size_sqft %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Lot Size</div>
+            <div>{{ prop.lot_size_sqft|floatformat:"0" }} sqft</div>
+          </div>
+          {% endif %}
+
+          {% if prop.garage_spaces is not None %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Garage Spaces</div>
+            <div>{{ prop.garage_spaces }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.stories %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Stories</div>
+            <div>{{ prop.stories }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.hoa_fee %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">HOA (monthly)</div>
+            <div>${{ prop.hoa_fee|floatformat:"0" }}/mo</div>
+          </div>
+          {% endif %}
+
+          {% if prop.annual_taxes %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Annual Taxes</div>
+            <div>${{ prop.annual_taxes|floatformat:"0" }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.price_per_sqft %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Price / Sq Ft</div>
+            <div>${{ prop.price_per_sqft }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.list_date %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">List Date</div>
+            <div>{{ prop.list_date }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.expiration_date %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Expires</div>
+            <div>{{ prop.expiration_date }}</div>
+          </div>
+          {% endif %}
+
+          {% if prop.sold_date %}
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Sold Date</div>
+            <div>{{ prop.sold_date }}</div>
+          </div>
+          {% endif %}
+
+        </div>
+
+        {% if prop.description %}
+        <div style="margin-top:1rem;padding-top:.875rem;border-top:1px solid var(--border-muted);">
+          <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.375rem;">Description</div>
+          <p style="font-size:.875rem;color:var(--text-secondary);margin:0;">{{ prop.description }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Showing / access -->
+    {% if prop.showing_instructions or prop.lockbox_code %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-key me-1"></i> Showing & Access</span>
+      </div>
+      <div class="card-body" style="padding:1rem 1.25rem;font-size:.8125rem;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.875rem;margin-bottom:{% if prop.showing_instructions %}.875rem{% else %}0{% endif %};">
+          <div>
+            <div style="color:var(--text-muted);margin-bottom:.2rem;">Lockbox</div>
+            <div>{{ prop.get_lockbox_type_display }}{% if prop.lockbox_code %} — <strong>{{ prop.lockbox_code }}</strong>{% endif %}</div>
+          </div>
+        </div>
+        {% if prop.showing_instructions %}
+        <div>
+          <div style="color:var(--text-muted);margin-bottom:.25rem;">Showing instructions</div>
+          <p style="margin:0;color:var(--text-secondary);">{{ prop.showing_instructions }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Notes -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-chat-left-text me-1" style="color:var(--brand-500);"></i> Notes</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+
+        <!-- Add note form -->
+        <form method="post" action="{% url 'properties:add_note' prop.pk %}" class="mb-3">
+          {% csrf_token %}
+          {{ note_form.body }}
+          <button type="submit" class="btn btn-primary btn-sm" style="margin-top:.5rem;">Add Note</button>
+        </form>
+
+        {% if notes %}
+          {% for note in notes %}
+          <div class="activity-item" style="padding:.625rem 0;">
+            <div class="activity-dot"></div>
+            <div class="activity-body">
+              <div class="activity-text">{{ note.body }}</div>
+              <div class="activity-meta">
+                {% if note.author %}{{ note.author.full_name }} · {% endif %}
+                {{ note.created_at|timesince }} ago
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:var(--text-muted);font-size:.8125rem;margin:0;">No notes yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right: Sidebar info ── -->
+  <div class="col-12 col-xl-4">
+
+    <!-- People -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">People</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;font-size:.8125rem;">
+
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;{% if prop.listing_agent %}border-bottom:1px solid var(--border-muted);{% endif %}">
+          <i class="bi bi-person-fill" style="color:var(--brand-500);width:1rem;text-align:center;"></i>
+          <div>
+            <div style="color:var(--text-muted);font-size:.75rem;">Owner / Seller</div>
+            {% if prop.owner_contact %}
+              <a href="{% url 'contacts:detail' prop.owner_contact.pk %}"
+                 style="color:var(--text-link);font-weight:500;">{{ prop.owner_contact.full_name }}</a>
+            {% else %}
+              <span style="color:var(--text-muted);">Not linked</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if prop.listing_agent %}
+        <div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;">
+          <i class="bi bi-briefcase-fill" style="color:var(--brand-500);width:1rem;text-align:center;"></i>
+          <div>
+            <div style="color:var(--text-muted);font-size:.75rem;">Listing Agent</div>
+            <div style="font-weight:500;">{{ prop.listing_agent.full_name }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Internal notes -->
+    {% if prop.notes %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Internal Notes</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;font-size:.8125rem;color:var(--text-secondary);">
+        {{ prop.notes }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick actions -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Quick actions</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;display:flex;flex-direction:column;gap:.5rem;">
+        <a href="{% url 'tasks:create' %}?contact={% if prop.owner_contact %}{{ prop.owner_contact.pk }}{% endif %}"
+           class="btn btn-ghost btn-sm" style="justify-content:flex-start;">
+          <i class="bi bi-plus-lg me-1"></i> Add Task
+        </a>
+        <a href="{% url 'properties:update' prop.pk %}"
+           class="btn btn-ghost btn-sm" style="justify-content:flex-start;">
+          <i class="bi bi-pencil me-1"></i> Edit Property
+        </a>
+      </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title" style="color:var(--color-danger);">Danger zone</span>
+      </div>
+      <div class="card-body" style="padding:.75rem 1.25rem;">
+        <a href="{% url 'properties:delete' prop.pk %}" class="btn btn-sm"
+           style="background:var(--color-danger-bg);color:var(--color-danger);border:1px solid var(--color-danger);">
+          <i class="bi bi-trash3"></i> Remove Property
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function toggleUploadPanel() {
+  const panel = document.getElementById('upload-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+function toggleCaptionForm(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+</script>
+
+{% endblock %}

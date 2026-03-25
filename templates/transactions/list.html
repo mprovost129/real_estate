@@ -1,0 +1,155 @@
+{% extends "base_app.html" %}
+
+{% block title %}Transactions{% endblock %}
+{% block page_title %}Transactions{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'transactions:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> New Transaction
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Search -->
+<form method="get" action="" style="margin-bottom:1rem;display:flex;gap:.5rem;">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search address…"
+         class="input" style="max-width:280px;">
+  <button type="submit" class="btn btn-ghost btn-sm">Search</button>
+  {% if q %}<a href="?tab={{ tab }}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+</form>
+
+<!-- Tabs -->
+<div style="display:flex;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border-muted);padding-bottom:0;">
+  <a href="?tab=active" class="tab-link {% if tab == 'active' %}active{% endif %}">
+    Active
+    {% if count_active %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_active }}</span>{% endif %}
+  </a>
+  <a href="?tab=closed" class="tab-link {% if tab == 'closed' %}active{% endif %}">
+    Closed
+    {% if count_closed %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_closed }}</span>{% endif %}
+  </a>
+  <a href="?tab=cancelled" class="tab-link {% if tab == 'cancelled' %}active{% endif %}">
+    Cancelled
+    {% if count_cancelled %}<span class="sidebar-link-badge" style="position:relative;top:0;margin-left:.25rem;">{{ count_cancelled }}</span>{% endif %}
+  </a>
+</div>
+
+{% if transactions %}
+<div class="table-responsive">
+  <table class="table" style="font-size:.875rem;">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Contacts</th>
+        <th>Price</th>
+        <th>Closing</th>
+        <th>Days to Close</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in transactions %}
+      <tr>
+        <td>
+          <a href="{% url 'transactions:detail' tx.pk %}"
+             style="font-weight:600;color:var(--text-primary);text-decoration:none;">
+            {{ tx.display_address }}
+          </a>
+          {% if tx.mls_number %}
+            <div style="font-size:.75rem;color:var(--text-muted);">MLS# {{ tx.mls_number }}</div>
+          {% endif %}
+        </td>
+        <td>{{ tx.get_transaction_type_display }}</td>
+        <td>
+          {% if tx.status == 'active' %}
+            <span class="badge badge-green">Active</span>
+          {% elif tx.status == 'pending' %}
+            <span class="badge badge-yellow">Pending</span>
+          {% elif tx.status == 'clear_to_close' %}
+            <span class="badge badge-blue">CTC</span>
+          {% elif tx.status == 'closed' %}
+            <span class="badge badge-gray">Closed</span>
+          {% elif tx.status == 'on_hold' %}
+            <span class="badge badge-orange">On Hold</span>
+          {% elif tx.status == 'fallen_through' %}
+            <span class="badge badge-red">Fallen Through</span>
+          {% elif tx.status == 'cancelled' %}
+            <span class="badge badge-red">Cancelled</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if tx.buyer_contact %}
+            <div style="font-size:.8125rem;">{{ tx.buyer_contact.full_name }} <span style="color:var(--text-muted);">(Buyer)</span></div>
+          {% endif %}
+          {% if tx.seller_contact %}
+            <div style="font-size:.8125rem;">{{ tx.seller_contact.full_name }} <span style="color:var(--text-muted);">(Seller)</span></div>
+          {% endif %}
+        </td>
+        <td>
+          {% if tx.purchase_price %}
+            ${{ tx.purchase_price|floatformat:0 }}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if tx.closing_date %}{{ tx.closing_date }}{% else %}—{% endif %}
+        </td>
+        <td>
+          {% if tx.days_to_closing is not None %}
+            {% if tx.days_to_closing < 0 %}
+              <span style="color:var(--red-600);">{{ tx.days_to_closing }} days</span>
+            {% elif tx.days_to_closing <= 7 %}
+              <span style="color:var(--yellow-600);">{{ tx.days_to_closing }} days</span>
+            {% else %}
+              {{ tx.days_to_closing }} days
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td style="text-align:right;">
+          <a href="{% url 'transactions:detail' tx.pk %}" class="btn btn-ghost btn-sm">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<div style="display:flex;justify-content:center;gap:.5rem;margin-top:1.25rem;">
+  {% if page_obj.has_previous %}
+    <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}" class="btn btn-ghost btn-sm">← Prev</a>
+  {% endif %}
+  {% if page_obj.has_next %}
+    <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}" class="btn btn-ghost btn-sm">Next →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card" style="padding:3rem;text-align:center;color:var(--text-muted);">
+  <i class="bi bi-file-earmark-text" style="font-size:2rem;display:block;margin-bottom:.75rem;"></i>
+  {% if tab == "active" %}
+    No active transactions.
+    <a href="{% url 'transactions:create' %}" style="color:var(--text-link);">Create one now.</a>
+  {% elif tab == "closed" %}
+    No closed transactions yet.
+  {% else %}
+    No cancelled transactions.
+  {% endif %}
+</div>
+{% endif %}
+
+<style>
+.tab-link {
+  display: inline-flex; align-items: center; padding: .5rem .875rem;
+  font-size: .8125rem; font-weight: 500; color: var(--text-secondary);
+  text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab-link:hover { color: var(--text-primary); }
+.tab-link.active { color: var(--brand-600); border-bottom-color: var(--brand-500); }
+</style>
+
+{% endblock %}

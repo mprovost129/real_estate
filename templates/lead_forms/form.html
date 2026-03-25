@@ -1,0 +1,171 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}Lead Forms{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'lead_forms:list' %}" class="btn btn-ghost btn-sm">← All Forms</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">{{ page_title }}</span>
+      </div>
+      <div class="card-body" style="padding:1.25rem;">
+        <form method="post">
+          {% csrf_token %}
+
+          {% if form.errors %}
+          <div class="flash flash-error" style="margin-bottom:1rem;">
+            Please fix the errors below.
+          </div>
+          {% endif %}
+
+          {# ── Identity ── #}
+          <div style="font-size:.6875rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.06em;color:var(--text-muted);margin-bottom:.75rem;">
+            Form identity
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Internal Name *</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Form Type</label>
+              {{ form.form_type }}
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Lead Source Tag</label>
+              {{ form.contact_source }}
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Assign new leads to</label>
+              {{ form.assigned_to }}
+            </div>
+            <div class="col-12 col-md-3 d-flex align-items-end">
+              <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+                {{ form.is_active }}
+                <span>Active (accept submissions)</span>
+              </label>
+            </div>
+          </div>
+
+          {# ── Display content ── #}
+          <div style="font-size:.6875rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.06em;color:var(--text-muted);margin-bottom:.75rem;
+                      border-top:1px solid var(--border-subtle);padding-top:1.25rem;">
+            Form display content
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-12">
+              <label class="form-label">Headline</label>
+              {{ form.headline }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Subheadline / intro text</label>
+              {{ form.subheadline }}
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label">Button text</label>
+              {{ form.button_text }}
+            </div>
+          </div>
+
+          {# ── Fields ── #}
+          <div style="font-size:.6875rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.06em;color:var(--text-muted);margin-bottom:.75rem;
+                      border-top:1px solid var(--border-subtle);padding-top:1.25rem;">
+            Optional fields
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin-bottom:1.25rem;">
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.show_phone }} Show phone field
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.require_phone }} Require phone
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.show_message }} Show message field
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.require_message }} Require message
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.show_address }} Show property address field
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.show_budget }} Show budget field
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.875rem;cursor:pointer;">
+              {{ form.show_timeline }} Show timeline field
+            </label>
+          </div>
+
+          {# ── Thank you ── #}
+          <div style="font-size:.6875rem;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.06em;color:var(--text-muted);margin-bottom:.75rem;
+                      border-top:1px solid var(--border-subtle);padding-top:1.25rem;">
+            After submission
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Thank-you title</label>
+              {{ form.thank_you_title }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Thank-you message</label>
+              {{ form.thank_you_body }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">
+                Redirect URL
+                <span style="font-weight:400;color:var(--text-muted);">(leave blank to show thank-you message)</span>
+              </label>
+              {{ form.redirect_url }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Save Form</button>
+            <a href="{% url 'lead_forms:list' %}" class="btn btn-ghost">Cancel</a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card" style="padding:1rem 1.25rem;font-size:.8125rem;color:var(--text-muted);line-height:1.7;">
+      <strong style="color:var(--text-secondary);display:block;margin-bottom:.5rem;">How it works</strong>
+      Each form gets a unique public URL you can share or embed on any website.
+      When someone submits the form, a Contact is automatically created in your CRM,
+      assigned to the chosen agent, and a notification is sent.
+      <br><br>
+      Duplicate emails are matched to existing contacts rather than creating duplicates.
+    </div>
+  </div>
+</div>
+
+<style>
+.form-label {
+  display: block;
+  font-size: .8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: .375rem;
+}
+.form-error {
+  font-size: .75rem;
+  color: var(--red-600, #dc2626);
+  margin-top: .25rem;
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,7 @@
+{% if value %}
+<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border-subtle);">
+  <i class="bi {{ icon }}" style="color:var(--text-muted);width:1rem;text-align:center;flex-shrink:0;font-size:.8125rem;"></i>
+  <span style="font-size:.75rem;color:var(--text-muted);width:7rem;flex-shrink:0;">{{ label }}</span>
+  <span style="font-size:.8125rem;color:var(--text-primary);flex:1;min-width:0;">{{ value }}</span>
+</div>
+{% endif %}

@@ -1,0 +1,159 @@
+{% extends "base_app.html" %}
+
+{% block title %}Manage Tags{% endblock %}
+{% block page_title %}Tags{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'contacts:list' %}" class="btn btn-ghost btn-sm">All Contacts</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+  {# ── Create new tag ── #}
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-plus-circle-fill me-1" style="color:var(--brand-500);"></i>
+          New Tag
+        </span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'contacts:tag_list' %}" class="d-flex flex-column gap-3">
+          {% csrf_token %}
+          <div>
+            <label style="font-size:.8125rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:.375rem;">
+              Tag Name
+            </label>
+            {{ form.name }}
+          </div>
+          <div>
+            <label style="font-size:.8125rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:.375rem;">
+              Color
+            </label>
+            <div class="d-flex align-items-center gap-2">
+              {{ form.color }}
+              <span style="font-size:.75rem;color:var(--text-muted);">Click to pick a color</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="align-self:flex-start;">
+            <i class="bi bi-plus-lg me-1"></i>Create Tag
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mt-3" style="padding:1rem 1.25rem;font-size:.8125rem;color:var(--text-muted);line-height:1.6;">
+      <strong style="color:var(--text-secondary);">About Tags</strong><br>
+      Tags let you label and segment contacts for quick filtering.
+      Apply tags from the contact's detail page or the edit form.
+      Deleting a tag removes it from all contacts.
+    </div>
+  </div>
+
+  {# ── Tag list ── #}
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-tags-fill me-1" style="color:var(--brand-500);"></i>
+          All Tags
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ tags|length }} tag{{ tags|length|pluralize }}</span>
+      </div>
+
+      {% if tags %}
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for tag in tags %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.625rem 0;border-bottom:1px solid var(--border-muted);"
+             id="tag-row-{{ tag.pk }}">
+
+          {# Preview + name #}
+          <div style="display:flex;align-items:center;gap:.75rem;flex:1;min-width:0;">
+            <div style="width:1rem;height:1rem;border-radius:9999px;
+                        background:{{ tag.color }};flex-shrink:0;
+                        box-shadow:0 0 0 2px {{ tag.color }}44;"></div>
+            <div>
+              <span style="font-size:.875rem;font-weight:600;color:var(--text-primary);" id="tag-name-{{ tag.pk }}">
+                {{ tag.name }}
+              </span>
+              <span style="font-size:.75rem;color:var(--text-muted);margin-left:.5rem;">
+                {{ tag.contact_count }} contact{{ tag.contact_count|pluralize }}
+              </span>
+            </div>
+          </div>
+
+          {# Actions + inline edit form #}
+          <div style="display:flex;gap:.375rem;align-items:center;flex-shrink:0;">
+            <a href="{% url 'contacts:list' %}?tag={{ tag.pk }}"
+               class="btn btn-ghost btn-sm" title="Filter contacts by this tag"
+               style="padding:.2rem .45rem;font-size:.75rem;">
+              <i class="bi bi-funnel"></i>
+            </a>
+            <button type="button" class="btn btn-ghost btn-sm" title="Edit"
+                    style="padding:.2rem .45rem;"
+                    onclick="toggleEdit({{ tag.pk }})">
+              <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+            </button>
+            <form method="post" action="{% url 'contacts:tag_delete' tag.pk %}"
+                  onsubmit="return confirm('Delete tag \'{{ tag.name }}\'? It will be removed from all contacts.');"
+                  style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm" title="Delete"
+                      style="padding:.2rem .45rem;">
+                <i class="bi bi-trash" style="font-size:.75rem;color:var(--red-500,#ef4444);"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {# Inline edit form (hidden by default) #}
+        <div id="edit-form-{{ tag.pk }}" style="display:none;padding:.625rem 0 .75rem;
+             border-bottom:1px solid var(--border-muted);background:var(--bg-subtle);
+             margin:0 -1.25rem;padding-left:1.25rem;padding-right:1.25rem;">
+          <form method="post" action="{% url 'contacts:tag_edit' tag.pk %}"
+                class="d-flex align-items-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <input type="text" name="name" value="{{ tag.name }}" required maxlength="50"
+                   class="input" style="width:180px;font-size:.875rem;">
+            <input type="color" name="color" value="{{ tag.color }}"
+                   class="input" style="width:3rem;padding:.2rem;cursor:pointer;">
+            <button type="submit" class="btn btn-primary btn-sm" style="font-size:.8125rem;">
+              Save
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" style="font-size:.8125rem;"
+                    onclick="toggleEdit({{ tag.pk }})">
+              Cancel
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div style="padding:3rem;text-align:center;color:var(--text-muted);">
+        <i class="bi bi-tags" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--text-muted);"></i>
+        <p style="font-size:.875rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">No tags yet</p>
+        <p style="font-size:.8125rem;">Create your first tag using the form on the left.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleEdit(pk) {
+  const form = document.getElementById('edit-form-' + pk);
+  const row  = document.getElementById('tag-row-' + pk);
+  const visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'block';
+  row.style.display  = visible ? ''     : 'none';
+}
+</script>
+
+{% endblock %}

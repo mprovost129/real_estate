@@ -1,0 +1,264 @@
+{% extends "base_app.html" %}
+
+{% block title %}Search: {{ q }}{% endblock %}
+{% block page_title %}Search Results{% endblock %}
+
+{% block content %}
+
+{% if not q %}
+{# ── Empty state — no query ── #}
+<div style="padding:4rem 1.5rem;text-align:center;">
+  <i class="bi bi-search" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem;"></i>
+  <p style="font-size:.9375rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">
+    Start typing to search
+  </p>
+  <p style="font-size:.8125rem;color:var(--text-muted);">
+    Search across contacts, properties, transactions, and tasks.
+  </p>
+</div>
+
+{% else %}
+
+{# ── Query summary ── #}
+<div style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;">
+  <div style="font-size:.875rem;color:var(--text-secondary);">
+    {% if total %}
+      <span style="font-weight:600;color:var(--text-primary);">{{ total }} result{{ total|pluralize }}</span>
+      for "<span style="font-style:italic;">{{ q }}</span>"
+    {% else %}
+      No results for "<span style="font-style:italic;">{{ q }}</span>"
+    {% endif %}
+  </div>
+  <form method="get" action="{% url 'global_search' %}" style="display:flex;gap:.5rem;align-items:center;">
+    <div style="position:relative;">
+      <i class="bi bi-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);
+         color:var(--text-muted);font-size:.8125rem;pointer-events:none;"></i>
+      <input type="text" name="q" value="{{ q }}" autofocus
+             style="width:280px;padding:.35rem .75rem .35rem 1.9rem;
+                    font-size:.875rem;border-radius:6px;
+                    border:1px solid var(--border-base);
+                    background:var(--bg-subtle);color:var(--text-primary);">
+    </div>
+    <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+    {% if q %}
+      <a href="{% url 'global_search' %}" class="btn btn-ghost btn-sm">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if total == 0 %}
+<div class="card" style="padding:3rem;text-align:center;">
+  <i class="bi bi-binoculars" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem;"></i>
+  <p style="font-size:.9375rem;font-weight:600;color:var(--text-primary);margin-bottom:.25rem;">Nothing found</p>
+  <p style="font-size:.8125rem;color:var(--text-muted);">
+    Try a different search term or check the spelling.
+  </p>
+</div>
+
+{% else %}
+
+<div class="row g-3">
+
+  {# ══════════════════════════════════════════════════════════════
+     LEFT COLUMN: Contacts + Properties
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="col-12 col-lg-7">
+
+    {# ── Contacts ── #}
+    {% if contacts %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-people-fill me-1" style="color:var(--brand-500);"></i>
+          Contacts
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ contacts|length }} result{{ contacts|length|pluralize }}</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for contact in contacts %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <div style="display:flex;align-items:center;gap:.625rem;">
+            <div style="width:2rem;height:2rem;border-radius:9999px;background:var(--brand-500);
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:.6875rem;font-weight:700;color:#fff;flex-shrink:0;">
+              {{ contact.first_name|first|upper }}{{ contact.last_name|first|upper }}
+            </div>
+            <div>
+              <a href="{% url 'contacts:detail' contact.pk %}"
+                 style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                {{ contact.full_name }}
+              </a>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                <span class="badge" style="font-size:.6875rem;padding:.1rem .35rem;">
+                  {{ contact.get_contact_type_display }}
+                </span>
+                {% if contact.primary_email %}
+                  · <a href="mailto:{{ contact.primary_email }}" style="color:var(--text-muted);">{{ contact.primary_email }}</a>
+                {% endif %}
+                {% if contact.primary_phone %}
+                  · <a href="tel:{{ contact.primary_phone }}" style="color:var(--text-muted);">{{ contact.primary_phone }}</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <a href="{% url 'contacts:detail' contact.pk %}" class="btn btn-ghost btn-sm"
+             style="font-size:.75rem;padding:.2rem .5rem;">View</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% if contacts|length == 10 %}
+      <div style="padding:.5rem 1.25rem;border-top:1px solid var(--border-subtle);text-align:right;">
+        <a href="{% url 'contacts:list' %}?q={{ q }}" style="font-size:.75rem;color:var(--brand-500);">
+          See all contacts matching "{{ q }}" <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Properties ── #}
+    {% if properties %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-house-fill me-1" style="color:var(--brand-500);"></i>
+          Properties
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ properties|length }} result{{ properties|length|pluralize }}</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for prop in properties %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <div style="display:flex;align-items:center;gap:.625rem;">
+            <div style="width:2rem;height:2rem;border-radius:6px;background:var(--bg-subtle);
+                        border:1px solid var(--border-base);
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-house" style="font-size:.875rem;color:var(--text-muted);"></i>
+            </div>
+            <div>
+              <a href="{% url 'properties:detail' prop.pk %}"
+                 style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+                {{ prop.address }}{% if prop.unit %} #{{ prop.unit }}{% endif %}
+              </a>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ prop.city }}, {{ prop.state }} {{ prop.zip_code }}
+                {% if prop.mls_number %} · MLS# {{ prop.mls_number }}{% endif %}
+                · <span class="badge" style="font-size:.6875rem;padding:.1rem .35rem;">
+                    {{ prop.get_status_display }}
+                  </span>
+              </div>
+            </div>
+          </div>
+          <a href="{% url 'properties:detail' prop.pk %}" class="btn btn-ghost btn-sm"
+             style="font-size:.75rem;padding:.2rem .5rem;">View</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ══════════════════════════════════════════════════════════════
+     RIGHT COLUMN: Transactions + Tasks
+  ══════════════════════════════════════════════════════════════ #}
+  <div class="col-12 col-lg-5">
+
+    {# ── Transactions ── #}
+    {% if transactions %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-file-earmark-text-fill me-1" style="color:var(--brand-500);"></i>
+          Transactions
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ transactions|length }} result{{ transactions|length|pluralize }}</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for tx in transactions %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <div>
+            <a href="{% url 'transactions:detail' tx.pk %}"
+               style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+              {% if tx.linked_property %}
+                {{ tx.linked_property.address }}
+              {% elif tx.property_address %}
+                {{ tx.property_address }}
+              {% else %}
+                Transaction #{{ tx.pk }}
+              {% endif %}
+            </a>
+            <div style="font-size:.75rem;color:var(--text-muted);">
+              {{ tx.get_transaction_type_display }} ·
+              <span style="{% if tx.status == 'closed' %}color:var(--green-600,#16a34a);{% elif tx.status == 'fallen_through' or tx.status == 'cancelled' %}color:var(--red-600,#dc2626);{% else %}color:var(--brand-500);{% endif %}font-weight:500;">
+                {{ tx.get_status_display }}
+              </span>
+              {% if tx.buyer_contact %} · {{ tx.buyer_contact.full_name }}{% endif %}
+              {% if tx.seller_contact %} · {{ tx.seller_contact.full_name }}{% endif %}
+            </div>
+          </div>
+          <a href="{% url 'transactions:detail' tx.pk %}" class="btn btn-ghost btn-sm"
+             style="font-size:.75rem;padding:.2rem .5rem;">View</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Tasks ── #}
+    {% if tasks %}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="bi bi-check2-square me-1" style="color:var(--brand-500);"></i>
+          Open Tasks
+        </span>
+        <span style="font-size:.75rem;color:var(--text-muted);">{{ tasks|length }} result{{ tasks|length|pluralize }}</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% for task in tasks %}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:.5rem 0;border-bottom:1px solid var(--border-muted);">
+          <div>
+            <a href="{% url 'tasks:detail' task.pk %}"
+               style="font-size:.875rem;font-weight:600;color:var(--text-primary);text-decoration:none;">
+              {{ task.title }}
+            </a>
+            <div style="font-size:.75rem;color:var(--text-muted);">
+              {% if task.contact %}
+                <a href="{% url 'contacts:detail' task.contact.pk %}"
+                   style="color:var(--text-muted);">{{ task.contact.full_name }}</a> ·
+              {% endif %}
+              Due {{ task.due_date }}
+              {% if task.priority == 'urgent' %}
+                · <span style="color:var(--red-600,#dc2626);font-weight:600;">Urgent</span>
+              {% elif task.priority == 'high' %}
+                · <span style="color:#d97706;font-weight:600;">High</span>
+              {% endif %}
+            </div>
+          </div>
+          <a href="{% url 'tasks:detail' task.pk %}" class="btn btn-ghost btn-sm"
+             style="font-size:.75rem;padding:.2rem .5rem;">View</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── Nothing in right column ── #}
+    {% if not transactions and not tasks %}
+    <div class="card" style="padding:2rem;text-align:center;color:var(--text-muted);font-size:.8125rem;">
+      No matching transactions or tasks.
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endif %}{# end total > 0 #}
+{% endif %}{# end q #}
+
+{% endblock %}

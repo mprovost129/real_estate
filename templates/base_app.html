@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body %}
+<div class="app-shell">
+
+  <!-- ============================================================
+       Sidebar
+       ============================================================ -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">
+        <i class="bi bi-house-fill text-white" style="font-size:1rem;"></i>
+      </div>
+      <span class="sidebar-logo-text">Real Estate CRM</span>
+    </div>
+
+    <!-- Org -->
+    {% if current_org %}
+    <div class="sidebar-org">
+      <div class="sidebar-org-name">{{ current_org.name }}</div>
+      <div class="sidebar-org-type">{{ current_org.get_org_type_display }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav" aria-label="Main navigation">
+
+      <a href="{% url 'dashboard' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-fill"></i> Dashboard
+      </a>
+
+      <div class="sidebar-section-label">CRM</div>
+
+      <a href="{% url 'contacts:list' %}"
+         class="sidebar-link {% if 'contacts' in request.resolver_match.app_names and request.resolver_match.url_name not in 'follow_up,generate_reminders' %}active{% endif %}">
+        <i class="bi bi-people-fill"></i> Contacts
+      </a>
+
+      <a href="{% url 'contacts:follow_up' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'follow_up' or request.resolver_match.url_name == 'generate_reminders' %}active{% endif %}">
+        <i class="bi bi-bell-fill"></i> Follow-up Center
+      </a>
+
+      <a href="{% url 'contacts:tag_list' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'tag_list' or request.resolver_match.url_name == 'tag_edit' or request.resolver_match.url_name == 'tag_delete' %}active{% endif %}">
+        <i class="bi bi-tags-fill"></i> Tags
+      </a>
+
+      <a href="{% url 'pipelines:board' %}"
+         class="sidebar-link {% if 'pipelines' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-funnel-fill"></i> Pipelines
+      </a>
+
+      <a href="{% url 'tasks:list' %}"
+         class="sidebar-link {% if 'tasks' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-check2-square"></i> Tasks
+        {% if overdue_task_count %}
+          <span class="sidebar-link-badge">{{ overdue_task_count }}</span>
+        {% endif %}
+      </a>
+
+      <a href="{% url 'calendar' %}"
+         class="sidebar-link {% if request.resolver_match.url_name == 'calendar' %}active{% endif %}">
+        <i class="bi bi-calendar3-fill"></i> Calendar
+      </a>
+
+      {% if org_capabilities.manage_automations %}
+        <a href="{% url 'automations:list' %}"
+           class="sidebar-link {% if 'automations' in request.resolver_match.app_names %}active{% endif %}">
+          <i class="bi bi-lightning-charge-fill"></i> Automations
+        </a>
+      {% endif %}
+
+      <div class="sidebar-section-label">Transactions</div>
+
+      <a href="{% url 'properties:list' %}"
+         class="sidebar-link {% if 'properties' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-house-door"></i> Properties
+      </a>
+
+      <a href="{% url 'open_houses:list' %}"
+         class="sidebar-link {% if 'open_houses' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-calendar3"></i> Open Houses
+      </a>
+
+      <a href="{% url 'transactions:list' %}"
+         class="sidebar-link {% if 'transactions' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-file-earmark-text-fill"></i> Transactions
+      </a>
+
+      {% if org_capabilities.manage_message_templates %}
+        <a href="{% url 'message_templates:list' %}"
+           class="sidebar-link {% if 'message_templates' in request.resolver_match.app_names %}active{% endif %}">
+          <i class="bi bi-envelope-paper-fill"></i> Templates
+        </a>
+      {% endif %}
+
+      <div class="sidebar-section-label">Insights</div>
+
+      <a href="{% url 'reports:overview' %}"
+         class="sidebar-link {% if 'reports' in request.resolver_match.app_names %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill"></i> Reports
+      </a>
+
+      <div class="sidebar-section-label">Workspace</div>
+
+      {% if org_capabilities.manage_team %}
+        <a href="{% url 'team_settings' %}"
+           class="sidebar-link {% if request.resolver_match.url_name == 'team_settings' or request.resolver_match.url_name == 'team_member_role' or request.resolver_match.url_name == 'team_member_remove' %}active{% endif %}">
+          <i class="bi bi-person-plus-fill"></i> Team
+        </a>
+      {% endif %}
+
+      {% if org_capabilities.manage_compliance %}
+        <a href="{% url 'compliance:dashboard' %}"
+           class="sidebar-link {% if 'compliance' in request.resolver_match.app_names %}active{% endif %}">
+          <i class="bi bi-shield-check"></i> Compliance
+        </a>
+      {% endif %}
+
+      <a href="{% url 'profile_settings' %}"
+         class="sidebar-link {% if 'settings' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-gear-fill"></i> Settings
+      </a>
+
+    </nav>
+
+    <!-- User footer -->
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <span class="sidebar-user-name truncate">{{ request.user.full_name }}</span>
+        <a href="{% url 'logout' %}" title="Sign out"
+           style="color:var(--sidebar-text-muted);flex-shrink:0;font-size:1rem;">
+          <i class="bi bi-box-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+
+  </aside>
+  <!-- /sidebar -->
+
+  <!-- ============================================================
+       Main content
+       ============================================================ -->
+  <div class="main-content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <h1 class="topbar-title">{% block page_title %}{% endblock %}</h1>
+      <div class="topbar-actions">
+        {# ── Global search ── #}
+        <form method="get" action="{% url 'global_search' %}" style="display:flex;align-items:center;">
+          <div style="position:relative;">
+            <i class="bi bi-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);
+               color:var(--text-muted);font-size:.8125rem;pointer-events:none;"></i>
+            <input type="text" name="q" value="{{ request.GET.q|default:'' }}"
+                   placeholder="Search…"
+                   autocomplete="off"
+                   style="width:180px;padding:.3rem .75rem .3rem 1.9rem;
+                          font-size:.8125rem;border-radius:6px;
+                          border:1px solid var(--border-base);
+                          background:var(--bg-subtle);color:var(--text-primary);
+                          transition:width .2s;"
+                   onfocus="this.style.width='240px'" onblur="this.style.width='180px'">
+          </div>
+        </form>
+        {% block topbar_actions %}{% endblock %}
+
+        {# ── Notification bell ── #}
+        <a href="{% url 'notifications:list' %}" title="Notifications"
+           style="position:relative;display:inline-flex;align-items:center;justify-content:center;
+                  width:2rem;height:2rem;border-radius:6px;color:var(--text-secondary);
+                  text-decoration:none;transition:background .15s;"
+           onmouseover="this.style.background='var(--bg-subtle)'"
+           onmouseout="this.style.background=''">
+          <i class="bi bi-bell{% if unread_notification_count %}-fill{% endif %}"
+             style="font-size:1rem;{% if unread_notification_count %}color:var(--brand-500);{% endif %}"></i>
+          {% if unread_notification_count %}
+          <span style="position:absolute;top:0;right:0;min-width:1rem;height:1rem;
+                       border-radius:9999px;background:var(--red-500,#ef4444);color:#fff;
+                       font-size:.5625rem;font-weight:700;
+                       display:flex;align-items:center;justify-content:center;
+                       padding:0 .2rem;transform:translate(25%,-25%);
+                       line-height:1;">
+            {{ unread_notification_count }}
+          </span>
+          {% endif %}
+        </a>
+
+        <button id="theme-toggle" class="theme-toggle" onclick="Theme.toggle()"
+                aria-label="Toggle theme" title="Toggle theme">
+          <span data-theme-icon>🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% if messages %}
+    <div style="padding:.75rem 1.5rem 0;">
+      {% for message in messages %}
+        <div class="flash flash-{{ message.tags|default:'info' }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Page content -->
+    <main class="page-body">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+  <!-- /main-content -->
+
+</div>
+{% endblock %}

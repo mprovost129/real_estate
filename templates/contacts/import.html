@@ -1,0 +1,170 @@
+{% extends "base_app.html" %}
+
+{% block title %}Import Contacts{% endblock %}
+{% block page_title %}Import Contacts{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;">
+
+{% if step == "upload" %}
+{# ── Step 1: Upload ── #}
+<div class="card" style="padding:1.5rem;margin-bottom:1rem;">
+  <h2 style="font-size:1rem;font-weight:600;margin-bottom:.25rem;">Upload CSV File</h2>
+  <p style="font-size:.875rem;color:var(--text-secondary);margin-bottom:1.25rem;">
+    Import contacts from a CSV file. The file should have a header row.
+    First Name is required; all other fields are optional.
+  </p>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="upload">
+    <div style="margin-bottom:1rem;">
+      <label class="form-label">Choose CSV File *</label>
+      <input type="file" name="csv_file" accept=".csv,.txt" class="input" required>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-upload me-1"></i>Upload & Preview
+    </button>
+    <a href="{% url 'contacts:list' %}" class="btn btn-ghost" style="margin-left:.5rem;">Cancel</a>
+  </form>
+</div>
+
+<div class="card" style="padding:1.25rem;">
+  <div style="font-weight:600;font-size:.875rem;margin-bottom:.75rem;">Supported Columns</div>
+  <div class="row g-2" style="font-size:.8125rem;color:var(--text-secondary);">
+    {% for val, label in field_choices %}
+      {% if val %}
+      <div class="col-6 col-md-4">
+        <span style="color:var(--text-muted);">→</span> {{ label }}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div style="margin-top:1rem;font-size:.8125rem;color:var(--text-muted);">
+    Column headers are auto-detected. Common names like "Email", "Phone", "First Name" etc. are matched automatically.
+  </div>
+</div>
+
+{% elif step == "mapping" %}
+{# ── Step 2: Map columns ── #}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="step" value="import">
+
+  <div class="card" style="padding:1.25rem;margin-bottom:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+      <h2 style="font-size:1rem;font-weight:600;margin:0;">Map Columns to Fields</h2>
+      <span style="font-size:.8125rem;color:var(--text-muted);">{{ total_rows }} row{{ total_rows|pluralize }} detected</span>
+    </div>
+    <p style="font-size:.875rem;color:var(--text-secondary);margin-bottom:1rem;">
+      Review the auto-detected mapping and adjust if needed. Columns set to "Skip" will be ignored.
+    </p>
+
+    <div class="table-responsive">
+      <table class="table" style="font-size:.875rem;">
+        <thead>
+          <tr>
+            <th style="width:28%;">CSV Column</th>
+            <th style="width:32%;">Map to Field</th>
+            <th>Sample Values</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for col in column_info %}
+          <tr>
+            <td style="font-weight:500;vertical-align:middle;">{{ col.header }}</td>
+            <td style="vertical-align:middle;">
+              <select name="col_{{ col.idx }}" class="input" style="font-size:.8125rem;">
+                {% for val, label in field_choices %}
+                  <option value="{{ val }}" {% if col.auto_field == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td style="color:var(--text-muted);font-size:.8125rem;vertical-align:middle;">
+              {% for sample in col.samples %}
+                <span style="display:inline-block;background:var(--bg-subtle);padding:.1rem .35rem;
+                             border-radius:4px;margin-right:.25rem;margin-bottom:.125rem;max-width:140px;
+                             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  {{ sample|truncatechars:30 }}
+                </span>
+              {% endfor %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="padding:1.25rem;margin-bottom:1.25rem;">
+    <div style="font-weight:600;font-size:.875rem;margin-bottom:.75rem;">Duplicate Handling</div>
+    <p style="font-size:.8125rem;color:var(--text-muted);margin-bottom:.75rem;">
+      Duplicates are detected by matching email address.
+    </p>
+    <div style="font-size:.875rem;">
+      <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;cursor:pointer;">
+        <input type="radio" name="duplicate_action" value="skip" checked>
+        <span><strong>Skip</strong> — leave existing contacts unchanged</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+        <input type="radio" name="duplicate_action" value="update">
+        <span><strong>Update</strong> — overwrite fields on existing contacts (matched by email)</span>
+      </label>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.75rem;">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-cloud-upload me-1"></i>Import Contacts
+    </button>
+    <a href="{% url 'contacts:import' %}" class="btn btn-ghost">Start Over</a>
+  </div>
+</form>
+
+{% elif step == "results" %}
+{# ── Step 3: Results ── #}
+<div class="card" style="padding:1.5rem;margin-bottom:1rem;">
+  <h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem;">Import Complete</h2>
+
+  <div class="row g-3" style="margin-bottom:1.25rem;">
+    <div class="col-4">
+      <div style="background:var(--green-50,#f0fdf4);border-radius:8px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:700;color:var(--green-600,#16a34a);">{{ imported }}</div>
+        <div style="font-size:.8125rem;color:var(--green-700,#15803d);">Imported</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div style="background:#eff6ff;border-radius:8px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:700;color:#2563eb;">{{ updated }}</div>
+        <div style="font-size:.8125rem;color:#1d4ed8;">Updated</div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div style="background:var(--bg-subtle);border-radius:8px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:700;color:var(--text-secondary);">{{ skipped }}</div>
+        <div style="font-size:.8125rem;color:var(--text-muted);">Skipped</div>
+      </div>
+    </div>
+  </div>
+
+  {% if errors %}
+  <div style="background:var(--red-50,#fef2f2);border-radius:6px;padding:1rem;margin-bottom:1rem;">
+    <div style="font-weight:600;color:var(--red-700,#b91c1c);font-size:.875rem;margin-bottom:.5rem;">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>Rows with errors ({{ errors|length }})
+    </div>
+    {% for err in errors %}
+      <div style="font-size:.8125rem;color:var(--red-600,#dc2626);">{{ err }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div style="display:flex;gap:.75rem;">
+    <a href="{% url 'contacts:list' %}" class="btn btn-primary">View Contacts</a>
+    <a href="{% url 'contacts:import' %}" class="btn btn-ghost">Import Another File</a>
+  </div>
+</div>
+
+{% endif %}
+
+</div>
+{% endblock %}

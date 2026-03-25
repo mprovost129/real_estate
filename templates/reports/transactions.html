@@ -1,0 +1,261 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block title %}Transactions Report{% endblock %}
+
+{% block report_content %}
+
+{# ── Year selector ── #}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <h2 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin:0;">
+    {{ year }} Production
+  </h2>
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label style="font-size:.8125rem;color:var(--text-muted);">Year:</label>
+    <select name="year" onchange="this.form.submit()"
+            class="input" style="width:auto;font-size:.8125rem;padding:.25rem .5rem;">
+      {% for y in year_range %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{# ── Summary stat cards ── #}
+<div class="row g-3 mb-3">
+
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Closings YTD</div>
+      <div class="metric-value">{{ closed_ytd }}</div>
+      <div class="metric-sub">{{ closed_month }} this month</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">GCI YTD</div>
+      <div class="metric-value" style="font-size:1.375rem;">
+        ${{ gci_ytd|floatformat:0|intcomma }}
+      </div>
+      <div class="metric-sub">${{ gci_month|floatformat:0|intcomma }} this month</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Volume YTD</div>
+      <div class="metric-value" style="font-size:1.375rem;">
+        ${{ volume_ytd|floatformat:0|intcomma }}
+      </div>
+      <div class="metric-sub">Avg ${{ avg_price_ytd|floatformat:0|intcomma }}</div>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Pipeline (Projected)</div>
+      <div class="metric-value">{{ pipeline_txs|length }}</div>
+      <div class="metric-sub">${{ projected_gci|floatformat:0|intcomma }} GCI · ${{ projected_vol|floatformat:0|intcomma }} vol</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3 mb-3">
+
+  {# ── Closings by month ── #}
+  <div class="col-12 col-lg-8">
+    <div class="chart-card">
+      <div class="chart-title">Closings by Month — {{ year }}</div>
+      {% with max_count=monthly|dictsort:"count"|last %}
+      {% for m in monthly %}
+      <div class="bar-row">
+        <div class="bar-label">{{ m.label }}</div>
+        <div class="bar-track">
+          {% if max_count.count > 0 %}
+          <div class="bar-fill" style="width:{% widthratio m.count max_count.count 100 %}%;"></div>
+          {% endif %}
+        </div>
+        <div class="bar-count">{{ m.count }}</div>
+        {% if m.gci > 0 %}
+        <div style="font-size:.75rem;color:var(--text-muted);width:6rem;text-align:right;">
+          ${{ m.gci|floatformat:0|intcomma }}
+        </div>
+        {% else %}
+        <div style="width:6rem;"></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% endwith %}
+    </div>
+  </div>
+
+  {# ── By type ── #}
+  <div class="col-12 col-lg-4">
+    <div class="chart-card h-100">
+      <div class="chart-title">By Transaction Type</div>
+      {% if by_type %}
+        {% with max_t=by_type|dictsort:"count"|last %}
+        {% for t in by_type %}
+        <div class="bar-row">
+          <div class="bar-label">{{ t.label }}</div>
+          <div class="bar-track">
+            {% if max_t.count > 0 %}
+            <div class="bar-fill" style="width:{% widthratio t.count max_t.count 100 %}%;background:var(--brand-400);"></div>
+            {% endif %}
+          </div>
+          <div class="bar-count">{{ t.count }}</div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="font-size:.8125rem;color:var(--text-muted);">No closed transactions yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<div class="row g-3 mb-3">
+
+  {# ── By listing agent ── #}
+  <div class="col-12 col-lg-6">
+    <div class="chart-card">
+      <div class="chart-title">By Listing Agent</div>
+      {% if by_agent_listing %}
+        {% with max_a=by_agent_listing|dictsort:"count"|last %}
+        {% for a in by_agent_listing %}
+        <div class="bar-row">
+          <div class="bar-label">{{ a.listing_agent__first_name }} {{ a.listing_agent__last_name }}</div>
+          <div class="bar-track">
+            {% if max_a.count > 0 %}
+            <div class="bar-fill" style="width:{% widthratio a.count max_a.count 100 %}%;background:#6366f1;"></div>
+            {% endif %}
+          </div>
+          <div class="bar-count">{{ a.count }}</div>
+          {% if a.gci %}
+          <div style="font-size:.75rem;color:var(--text-muted);width:6rem;text-align:right;">
+            ${{ a.gci|floatformat:0|intcomma }}
+          </div>
+          {% else %}
+          <div style="width:6rem;"></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="font-size:.8125rem;color:var(--text-muted);">No data.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── By buyer's agent ── #}
+  <div class="col-12 col-lg-6">
+    <div class="chart-card">
+      <div class="chart-title">By Buyer's Agent</div>
+      {% if by_agent_buying %}
+        {% with max_b=by_agent_buying|dictsort:"count"|last %}
+        {% for a in by_agent_buying %}
+        <div class="bar-row">
+          <div class="bar-label">{{ a.buyers_agent__first_name }} {{ a.buyers_agent__last_name }}</div>
+          <div class="bar-track">
+            {% if max_b.count > 0 %}
+            <div class="bar-fill" style="width:{% widthratio a.count max_b.count 100 %}%;background:#16a34a;"></div>
+            {% endif %}
+          </div>
+          <div class="bar-count">{{ a.count }}</div>
+          {% if a.gci %}
+          <div style="font-size:.75rem;color:var(--text-muted);width:6rem;text-align:right;">
+            ${{ a.gci|floatformat:0|intcomma }}
+          </div>
+          {% else %}
+          <div style="width:6rem;"></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <p style="font-size:.8125rem;color:var(--text-muted);">No data.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── Active pipeline table ── #}
+{% if pipeline_txs %}
+<div class="chart-card">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="chart-title" style="margin-bottom:0;">Active Pipeline</div>
+    <a href="{% url 'transactions:list' %}" style="font-size:.75rem;color:var(--brand-500);">
+      View all <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border-base);">
+          <th style="padding:.5rem .75rem;text-align:left;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Property</th>
+          <th style="padding:.5rem .75rem;text-align:left;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Type</th>
+          <th style="padding:.5rem .75rem;text-align:left;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Status</th>
+          <th style="padding:.5rem .75rem;text-align:right;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Price</th>
+          <th style="padding:.5rem .75rem;text-align:right;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Commission</th>
+          <th style="padding:.5rem .75rem;text-align:left;font-size:.6875rem;font-weight:600;
+                     text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Closing</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in pipeline_txs %}
+        <tr style="border-bottom:1px solid var(--border-subtle);"
+            onmouseover="this.style.background='var(--bg-subtle)'"
+            onmouseout="this.style.background=''">
+          <td style="padding:.5rem .75rem;">
+            <a href="{% url 'transactions:detail' tx.pk %}"
+               style="font-weight:600;color:var(--text-primary);text-decoration:none;">
+              {% if tx.linked_property %}
+                {{ tx.linked_property.address }}
+              {% elif tx.property_address %}
+                {{ tx.property_address }}
+              {% else %}
+                Transaction #{{ tx.pk }}
+              {% endif %}
+            </a>
+            <div style="font-size:.75rem;color:var(--text-muted);">
+              {% if tx.buyer_contact %}{{ tx.buyer_contact.full_name }}{% endif %}
+              {% if tx.buyer_contact and tx.seller_contact %} / {% endif %}
+              {% if tx.seller_contact %}{{ tx.seller_contact.full_name }}{% endif %}
+            </div>
+          </td>
+          <td style="padding:.5rem .75rem;color:var(--text-secondary);">{{ tx.get_transaction_type_display }}</td>
+          <td style="padding:.5rem .75rem;">
+            <span style="font-size:.75rem;font-weight:600;
+              color:{% if tx.status == 'clear_to_close' %}var(--green-600,#16a34a){% elif tx.status == 'pending' %}#d97706{% else %}var(--brand-500){% endif %};">
+              {{ tx.get_status_display }}
+            </span>
+          </td>
+          <td style="padding:.5rem .75rem;text-align:right;color:var(--text-secondary);">
+            {% if tx.purchase_price %}${{ tx.purchase_price|floatformat:0|intcomma }}{% else %}—{% endif %}
+          </td>
+          <td style="padding:.5rem .75rem;text-align:right;font-weight:600;color:var(--text-primary);">
+            {% if tx.commission_amount %}${{ tx.commission_amount|floatformat:0|intcomma }}{% else %}—{% endif %}
+          </td>
+          <td style="padding:.5rem .75rem;color:var(--text-secondary);">
+            {% if tx.closing_date %}
+              {{ tx.closing_date|date:"M j, Y" }}
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

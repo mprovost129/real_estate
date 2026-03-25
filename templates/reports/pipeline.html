@@ -1,0 +1,201 @@
+{% extends "reports/base_reports.html" %}
+{% load humanize %}
+
+{% block title %}Reports - Pipeline{% endblock %}
+
+{% block report_content %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Active Deals</div>
+      <div class="metric-value">{{ total_active }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Pipeline Value</div>
+      <div class="metric-value" style="font-size:1.375rem;">
+        {% if total_value %}${{ total_value|floatformat:"0" }}{% else %}-{% endif %}
+      </div>
+      <div class="metric-sub">
+        Weighted: {% if weighted_pipeline_value %}${{ weighted_pipeline_value|floatformat:"0" }}{% else %}-{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Won This Month</div>
+      <div class="metric-value" style="color:var(--color-success);">{{ won_month }}</div>
+      <div class="metric-sub">
+        {% if won_value_month %}${{ won_value_month|floatformat:"0" }}{% else %}-{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="metric-card">
+      <div class="metric-label">Total Won / Lost</div>
+      <div class="metric-value">
+        <span style="color:var(--color-success);">{{ won_total }}</span>
+        <span style="color:var(--text-muted);font-size:1rem;"> / </span>
+        <span style="color:var(--color-danger);">{{ lost_total }}</span>
+      </div>
+      <div class="metric-sub">Forecast confidence: {{ forecast_confidence }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card mb-3">
+  <div class="chart-title">Forecast by Expected Close Window</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <th style="padding:.375rem .5rem;text-align:left;color:var(--text-muted);font-weight:600;">Window</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Deals</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Pipeline Value</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Weighted Forecast</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in forecast_buckets %}
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <td style="padding:.5rem .5rem;">{{ b.label }}</td>
+        <td style="padding:.5rem .5rem;font-weight:600;">{{ b.count }}</td>
+        <td style="padding:.5rem .5rem;">{% if b.value %}${{ b.value|floatformat:"0" }}{% else %}-{% endif %}</td>
+        <td style="padding:.5rem .5rem;color:var(--text-secondary);">{% if b.weighted %}${{ b.weighted|floatformat:"0" }}{% else %}-{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% for pd in pipeline_data %}
+<div class="chart-card mb-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="chart-title" style="margin-bottom:0;">{{ pd.pipeline.name }}</div>
+    <div style="font-size:.8125rem;color:var(--text-muted);">
+      {{ pd.total_count }} active deal{{ pd.total_count|pluralize }}
+      {% if pd.total_value %} - ${{ pd.total_value|floatformat:"0" }}{% endif %}
+    </div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <th style="padding:.375rem .5rem;text-align:left;color:var(--text-muted);font-weight:600;">Stage</th>
+        <th style="padding:.375rem .5rem;font-weight:600;color:var(--text-muted);">Deals</th>
+        <th style="padding:.375rem .5rem;font-weight:600;color:var(--text-muted);">Value</th>
+        <th style="padding:.375rem .5rem;font-weight:600;color:var(--text-muted);">Distribution</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in pd.stages %}
+      {% if item.count %}
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <td style="padding:.5rem .5rem;">
+          <span style="display:inline-block;width:.5rem;height:.5rem;border-radius:50%;
+                       background:{{ item.stage.color|default:'var(--brand-400)' }};margin-right:.375rem;"></span>
+          {{ item.stage.name }}
+        </td>
+        <td style="padding:.5rem .5rem;font-weight:600;">{{ item.count }}</td>
+        <td style="padding:.5rem .5rem;color:var(--text-secondary);">
+          {% if item.value %}${{ item.value|floatformat:"0" }}{% else %}-{% endif %}
+        </td>
+        <td style="padding:.5rem .5rem;min-width:120px;">
+          <div style="display:flex;align-items:center;gap:.5rem;">
+            <div class="bar-track" style="flex:1;">
+              <div class="bar-fill"
+                   style="width:{% if pd.total_count %}{% widthratio item.count pd.total_count 100 %}%{% else %}0%{% endif %};
+                          background:{{ item.stage.color|default:'var(--brand-400)' }};"></div>
+            </div>
+            <span style="font-size:.75rem;color:var(--text-muted);width:2.5rem;text-align:right;">
+              {% widthratio item.count pd.total_count 100 %}%
+            </span>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% empty %}
+<div class="chart-card" style="text-align:center;color:var(--text-muted);padding:3rem;">
+  <i class="bi bi-funnel" style="font-size:2rem;display:block;margin-bottom:.75rem;"></i>
+  No active deals yet. <a href="{% url 'pipelines:deal_create' %}" style="color:var(--text-link);">Create a deal.</a>
+</div>
+{% endfor %}
+
+{% if by_agent %}
+<div class="chart-card mt-3">
+  <div class="chart-title">Active deals by agent</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <th style="padding:.375rem .5rem;text-align:left;color:var(--text-muted);font-weight:600;">Agent</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Deals</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Pipeline value</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in by_agent %}
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <td style="padding:.5rem .5rem;color:var(--text-secondary);">
+          {% if row.assigned_to__first_name %}
+            {{ row.assigned_to__first_name }} {{ row.assigned_to__last_name }}
+          {% else %}
+            <span style="color:var(--text-muted);">Unassigned</span>
+          {% endif %}
+        </td>
+        <td style="padding:.5rem .5rem;font-weight:600;">{{ row.count }}</td>
+        <td style="padding:.5rem .5rem;color:var(--text-secondary);">
+          {% if row.value %}${{ row.value|floatformat:"0" }}{% else %}-{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if scorecards %}
+<div class="chart-card mt-3">
+  <div class="chart-title">Team Scorecards</div>
+  <table style="width:100%;border-collapse:collapse;font-size:.8125rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <th style="padding:.375rem .5rem;text-align:left;color:var(--text-muted);font-weight:600;">Agent</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Active</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Pipeline</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Weighted</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Avg Days</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Stale %</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Won 30d</th>
+        <th style="padding:.375rem .5rem;color:var(--text-muted);font-weight:600;">Win Rate 90d</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in scorecards %}
+      <tr style="border-bottom:1px solid var(--border-muted);">
+        <td style="padding:.5rem .5rem;">{{ row.agent_name }}</td>
+        <td style="padding:.5rem .5rem;font-weight:600;">{{ row.active_deals }}</td>
+        <td style="padding:.5rem .5rem;">{% if row.pipeline_value %}${{ row.pipeline_value|floatformat:"0" }}{% else %}-{% endif %}</td>
+        <td style="padding:.5rem .5rem;">{% if row.weighted_value %}${{ row.weighted_value|floatformat:"0" }}{% else %}-{% endif %}</td>
+        <td style="padding:.5rem .5rem;">{{ row.avg_days_in_stage }}</td>
+        <td style="padding:.5rem .5rem;">{{ row.stale_rate }}%</td>
+        <td style="padding:.5rem .5rem;">{{ row.won_30d }}</td>
+        <td style="padding:.5rem .5rem;">
+          {% if row.win_rate_90d is not None %}
+            {{ row.win_rate_90d }}%
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

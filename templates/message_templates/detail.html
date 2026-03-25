@@ -1,0 +1,112 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ tmpl.name }}{% endblock %}
+{% block page_title %}{{ tmpl.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:duplicate' tmpl.pk %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-copy"></i> Duplicate
+  </a>
+  <a href="{% url 'message_templates:update' tmpl.pk %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+  <a href="{% url 'message_templates:delete' tmpl.pk %}" class="btn btn-ghost btn-sm" style="color:var(--red-600);">
+    <i class="bi bi-trash"></i> Delete
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Left: Preview -->
+  <div class="col-12 col-lg-8">
+    <div class="card" style="padding:1.25rem;">
+
+      <!-- Meta badges -->
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        {% if tmpl.template_type == 'email' %}
+          <span class="badge badge-blue"><i class="bi bi-envelope me-1"></i>Email</span>
+        {% elif tmpl.template_type == 'sms' %}
+          <span class="badge badge-green"><i class="bi bi-chat-text me-1"></i>SMS</span>
+        {% else %}
+          <span class="badge badge-gray"><i class="bi bi-telephone me-1"></i>Call Script</span>
+        {% endif %}
+        <span class="badge badge-gray">{{ tmpl.get_category_display }}</span>
+      </div>
+
+      <!-- Subject (email) -->
+      {% if tmpl.template_type == 'email' and tmpl.subject %}
+      <div style="background:var(--bg-subtle);border-radius:6px;padding:.625rem .875rem;margin-bottom:1rem;">
+        <div style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.25rem;">Subject Line</div>
+        <div style="font-size:.9375rem;font-weight:500;">{{ preview_subject }}</div>
+      </div>
+      {% endif %}
+
+      <!-- Body preview -->
+      <div style="font-size:.875rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">
+        Preview <span style="font-weight:400;font-size:.75rem;">(with sample data)</span>
+      </div>
+      <div style="background:var(--bg-subtle);border-radius:6px;padding:1rem 1.125rem;
+                  font-size:.9375rem;line-height:1.75;white-space:pre-wrap;color:var(--text-primary);">{{ preview_body }}</div>
+
+      <!-- Raw body -->
+      <details style="margin-top:1rem;">
+        <summary style="font-size:.8125rem;color:var(--text-muted);cursor:pointer;user-select:none;">
+          Show raw template (with merge tags)
+        </summary>
+        <div style="margin-top:.5rem;background:var(--bg-subtle);border-radius:6px;padding:1rem 1.125rem;
+                    font-size:.875rem;line-height:1.75;white-space:pre-wrap;color:var(--text-secondary);
+                    font-family:monospace;">{{ tmpl.body }}</div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- Right: Info + actions -->
+  <div class="col-12 col-lg-4">
+
+    <div class="card" style="padding:1.125rem;margin-bottom:1rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Details</div>
+      <div class="detail-row"><span>Type</span><span>{{ tmpl.get_template_type_display }}</span></div>
+      <div class="detail-row"><span>Category</span><span>{{ tmpl.get_category_display }}</span></div>
+      {% if tmpl.created_by %}<div class="detail-row"><span>Created By</span><span>{{ tmpl.created_by.full_name }}</span></div>{% endif %}
+      <div class="detail-row"><span>Created</span><span>{{ tmpl.created_at|date:"M j, Y" }}</span></div>
+    </div>
+
+    <div class="card" style="padding:1.125rem;margin-bottom:1rem;">
+      <div style="font-weight:600;font-size:.875rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:.75rem;">Merge Fields</div>
+      <div style="font-size:.8125rem;color:var(--text-secondary);line-height:1.8;">
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}first_name{% templatetag closevariable %}</code> First name<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}last_name{% templatetag closevariable %}</code> Last name<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}full_name{% templatetag closevariable %}</code> Full name<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}address{% templatetag closevariable %}</code> Property address<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}agent_name{% templatetag closevariable %}</code> Agent name<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}closing_date{% templatetag closevariable %}</code> Closing date<br>
+        <code style="background:var(--bg-subtle);padding:.1rem .3rem;border-radius:3px;font-size:.8rem;">{% templatetag openvariable %}price{% templatetag closevariable %}</code> Price
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:.5rem;">
+      <a href="{% url 'message_templates:update' tmpl.pk %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Edit Template
+      </a>
+      <a href="{% url 'message_templates:duplicate' tmpl.pk %}" class="btn btn-ghost btn-sm">
+        <i class="bi bi-copy me-1"></i>Duplicate
+      </a>
+      <a href="{% url 'message_templates:list' %}?tab={{ tmpl.template_type }}" class="btn btn-ghost btn-sm">
+        ← Back to Templates
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.detail-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .375rem 0; border-bottom: 1px solid var(--border-muted);
+  font-size: .8125rem; color: var(--text-secondary);
+}
+.detail-row span:first-child { color: var(--text-muted); }
+</style>
+{% endblock %}

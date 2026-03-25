@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+            padding:3rem 1rem;background:var(--bg-base);">
+
+  <!-- Theme toggle -->
+  <button id="theme-toggle" onclick="Theme.toggle()" class="theme-toggle"
+          style="position:fixed;top:1rem;right:1rem;" aria-label="Toggle theme">
+    <span data-theme-icon>🌙</span>
+  </button>
+
+  <div style="width:100%;max-width:420px;">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;
+                  width:3rem;height:3rem;border-radius:.75rem;background:var(--brand-500);
+                  margin-bottom:.75rem;">
+        <i class="bi bi-house-fill" style="color:#fff;font-size:1.25rem;"></i>
+      </div>
+      <h1 style="font-size:1.375rem;font-weight:700;color:var(--text-primary);margin:0;">
+        Real Estate CRM
+      </h1>
+    </div>
+
+    <!-- Card -->
+    <div class="card" style="padding:2rem;">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="flash flash-{{ message.tags|default:'info' }}" style="margin-bottom:1rem;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block card %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

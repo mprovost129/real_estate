@@ -1,0 +1,120 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block page_title %}Campaign: {{ campaign.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:campaign_update' campaign.pk %}" class="btn btn-secondary btn-sm">
+    <i class="bi bi-pencil"></i> Edit
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-xl-7">
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-list-ol me-1"></i>Steps</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if steps %}
+          {% for step in steps %}
+            <div style="padding:.7rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;gap:.75rem;">
+              <div>
+                <div style="font-weight:600;">Step {{ step.order }} · {{ step.template.name }}</div>
+                <div style="font-size:.8rem;color:var(--text-muted);">
+                  Delay: {{ step.delay_days }} day{{ step.delay_days|pluralize }} ·
+                  {% if step.is_active %}Active{% else %}Inactive{% endif %}
+                </div>
+              </div>
+              <form method="post" action="{% url 'message_templates:campaign_delete_step' campaign.pk step.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm">Delete</button>
+              </form>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No steps yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-people me-1"></i>Enrollments</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if enrollments %}
+          {% for e in enrollments %}
+            <div style="padding:.6rem 0;border-bottom:1px solid var(--border-muted);">
+              <div style="font-weight:600;">{{ e.contact.full_name }}</div>
+              <div style="font-size:.8rem;color:var(--text-muted);">
+                {{ e.get_status_display }} · Last step: {{ e.last_step_order }} ·
+                {% if e.next_run_at %}Next run: {{ e.next_run_at|date:"M j, g:i A" }}{% else %}No next run{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No enrollments yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-5">
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-plus-circle me-1"></i>Add Step</span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'message_templates:campaign_add_step' campaign.pk %}">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-4">
+              <label class="label">Order</label>
+              {{ step_form.order }}
+            </div>
+            <div class="col-4">
+              <label class="label">Delay Days</label>
+              {{ step_form.delay_days }}
+            </div>
+            <div class="col-12">
+              <label class="label">Template</label>
+              {{ step_form.template }}
+            </div>
+            <div class="col-12">
+              <label class="d-flex align-items-center gap-2">{{ step_form.is_active }} Active</label>
+            </div>
+          </div>
+          <div style="margin-top:.75rem;">
+            <button type="submit" class="btn btn-primary btn-sm">Add Step</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-clock-history me-1"></i>Recent Sends</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if logs %}
+          {% for log in logs %}
+            <div style="padding:.6rem 0;border-bottom:1px solid var(--border-muted);">
+              <div style="font-size:.8125rem;font-weight:600;">{{ log.contact.full_name }} · {{ log.get_status_display }}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);">
+                {{ log.created_at|date:"M j, g:i A" }}{% if log.step %} · Step {{ log.step.order }}{% endif %}
+              </div>
+              {% if log.detail %}
+                <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.15rem;">{{ log.detail|truncatechars:120 }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No sends yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
