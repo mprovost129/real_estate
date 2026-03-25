@@ -145,6 +145,7 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added Google OAuth token exchange/refresh plumbing and live Google Calendar adapter calls for list/upsert/delete.
 - [x] Added Outlook OAuth token exchange/refresh plumbing and Microsoft Graph Calendar adapter calls for list/upsert/delete.
 - [x] Added calendar pull sync baseline (`manage.py pull_calendar_updates`) with mapped-event conflict detection.
+- [x] Added listing sync execution baseline (`manage.py sync_listing_data`) with provider fetch, listing state updates, optional property field merge, and optional photo import.
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations

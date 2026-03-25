@@ -180,6 +180,8 @@ ZILLOW_MLS_PHOTO_URL_TEMPLATE = env(
     'ZILLOW_MLS_PHOTO_URL_TEMPLATE',
     default='https://media.mlspin.com/photo.aspx?mls={mls}&n={num}&w=1024&h=768',
 )
+MLS_IDX_LOOKUP_URL_TEMPLATE = env('MLS_IDX_LOOKUP_URL_TEMPLATE', default='')
+MLS_IDX_API_KEY = env('MLS_IDX_API_KEY', default='')
 GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
 MICROSOFT_CLIENT_ID = env('MICROSOFT_CLIENT_ID', default='')
