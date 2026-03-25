@@ -148,6 +148,7 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added listing sync execution baseline (`manage.py sync_listing_data`) with provider fetch, listing state updates, optional property field merge, and optional photo import.
 - [x] Added integration sync run observability + controls (`IntegrationSyncRun` log model, retries, max-failure threshold, and fail-on-error support across sync commands).
 - [x] Added integration sync alert routing to in-app notifications for owner/admin users on failed/high-error runs.
+- [x] Added exponential backoff retry controls across integration sync commands (`--retry-backoff-seconds`, `--retry-backoff-factor`, `--retry-backoff-max-seconds`).
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations

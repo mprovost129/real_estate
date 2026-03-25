@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from integrations.models import IntegrationConnection, IntegrationSyncRun
 from integrations.services.alerts import emit_sync_run_alerts
 from integrations.services.calendar_pull_sync import pull_calendar_connection_updates
+from integrations.services.retry import sleep_with_backoff
 from integrations.services.sync_runs import finish_sync_run, start_sync_run
 
 
@@ -15,6 +16,9 @@ class Command(BaseCommand):
         parser.add_argument("--days-back", type=int, default=30)
         parser.add_argument("--days-ahead", type=int, default=90)
         parser.add_argument("--retries", type=int, default=1)
+        parser.add_argument("--retry-backoff-seconds", type=float, default=1.0)
+        parser.add_argument("--retry-backoff-factor", type=float, default=2.0)
+        parser.add_argument("--retry-backoff-max-seconds", type=float, default=30.0)
         parser.add_argument("--max-failures", type=int, default=0)
         parser.add_argument("--fail-on-error", action="store_true")
 
@@ -50,6 +54,9 @@ class Command(BaseCommand):
                     "days_back": options["days_back"],
                     "days_ahead": options["days_ahead"],
                     "retries": options["retries"],
+                    "retry_backoff_seconds": options["retry_backoff_seconds"],
+                    "retry_backoff_factor": options["retry_backoff_factor"],
+                    "retry_backoff_max_seconds": options["retry_backoff_max_seconds"],
                 },
             )
 
@@ -85,7 +92,17 @@ class Command(BaseCommand):
                 except Exception as exc:
                     final_exc = exc
                     if attempt < max(1, options["retries"]):
-                        self.stdout.write(self.style.WARNING(f"attempt {attempt} failed, retrying: {exc}"))
+                        delay = sleep_with_backoff(
+                            attempt=attempt,
+                            base_seconds=options["retry_backoff_seconds"],
+                            factor=options["retry_backoff_factor"],
+                            max_seconds=options["retry_backoff_max_seconds"],
+                        )
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f"attempt {attempt} failed, retrying in {delay:.2f}s: {exc}"
+                            )
+                        )
                     else:
                         self.stdout.write(self.style.ERROR(f"pull failed: {exc}"))
             if final_exc is not None:
