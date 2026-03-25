@@ -37,6 +37,7 @@ DATABASES = {
     'default': env.db('DATABASE_URL')  # noqa: F405
 }
 DATABASES['default']['CONN_MAX_AGE'] = 60  # persistent connections
+apply_db_schema(DATABASES['default'])  # noqa: F405
 
 # ---------------------------------------------------------------------------
 # Static files - served via WhiteNoise (add whitenoise to requirements)

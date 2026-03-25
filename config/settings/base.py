@@ -104,6 +104,24 @@ DATABASES = {
         'PORT': env.str('DB_PORT', default='5432'),
     }
 }
+
+DB_SCHEMA = env.str('DB_SCHEMA', default='public').strip() or 'public'
+
+
+def apply_db_schema(database_config):
+    """
+    Isolate tenants by PostgreSQL schema when DB_SCHEMA is set to non-public.
+    """
+    if DB_SCHEMA == 'public':
+        return
+
+    options = database_config.setdefault('OPTIONS', {})
+    current = options.get('options', '').strip()
+    search_path_opt = f'-c search_path={DB_SCHEMA},public'
+    options['options'] = f'{current} {search_path_opt}'.strip()
+
+
+apply_db_schema(DATABASES['default'])
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ---------------------------------------------------------------------------
