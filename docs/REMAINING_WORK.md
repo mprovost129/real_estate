@@ -11,14 +11,13 @@ Initial sync orchestration is in place (`manage.py sync_calendar_events`) with e
 ### Integrations
 - MLS/IDX integration
 - Zillow API integration (requested, pending access) https://media.mlspin.com/photo.aspx?mls={mls}&n={num}&w=1024&h=768
-- Outlook calendar provider implementation (Google outbound baseline is in place)
+- Calendar pull sync + conflict handling (Google/Outlook)
 - Voice/call provider integration
 - E-sign/document storage integration
 
 ## Recommended Next Build Order
 1. Calendar and listing provider implementations
-- Outlook token exchange + provider API implementation
-- Background sync jobs (push tasks/open houses/closings + pull updates)
+- Background sync jobs (pull updates + resilient retries/monitoring)
 - MLS/IDX and Zillow provider implementations using live credentials
 
 2. Provider rollouts

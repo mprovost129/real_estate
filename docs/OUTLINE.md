@@ -108,7 +108,7 @@ This document tracks what is implemented in the app today and what remains.
 - [ ] MLS/IDX integration
 - [ ] Zillow API integration (requested, pending)
 - [x] Google Calendar outbound sync baseline (OAuth, token refresh, push events)
-- [ ] Outlook calendar provider implementation
+- [x] Outlook Calendar outbound sync baseline (OAuth, token refresh, push events)
 - [ ] Voice/call provider integration
 - [ ] E-sign/document storage integration
 
@@ -142,6 +142,7 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added initial calendar push sync job (`manage.py sync_calendar_events`) with persisted event mapping for tasks, open houses, and closings.
 - [x] Added OAuth connection scaffolding for Google/Outlook calendar providers (start/callback flow with code capture).
 - [x] Added Google OAuth token exchange/refresh plumbing and live Google Calendar adapter calls for list/upsert/delete.
+- [x] Added Outlook OAuth token exchange/refresh plumbing and Microsoft Graph Calendar adapter calls for list/upsert/delete.
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations
