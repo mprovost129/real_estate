@@ -150,6 +150,9 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added integration sync alert routing to in-app notifications for owner/admin users on failed/high-error runs.
 - [x] Added exponential backoff retry controls across integration sync commands (`--retry-backoff-seconds`, `--retry-backoff-factor`, `--retry-backoff-max-seconds`).
 - [x] Added alert escalation tiers for integration sync health (warning vs critical based on failure ratio and consecutive failed runs).
+- [x] Added shared-database schema isolation support (`DB_SCHEMA`) and `manage.py ensure_db_schema` helper command for safer multi-site deployments.
+- [x] Added startup/system-check warning for unsafe hosted config when `DB_SCHEMA=public` (`organizations.W001`).
+- [x] Added deploy gate command for schema isolation (`manage.py db_isolation_gate [--json] [--fail-on-warning]`).
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations

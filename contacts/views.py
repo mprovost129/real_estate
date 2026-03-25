@@ -241,7 +241,13 @@ class ContactCreateView(OrgRoleRequiredMixin, OrgMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.organization = self.org
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        messages.success(self.request, f'Contact "{self.object.full_name}" was saved.')
+        return response
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Contact was not saved. Please fix the highlighted fields and try again.")
+        return super().form_invalid(form)
 
     def get_success_url(self):
         return reverse("contacts:detail", kwargs={"pk": self.object.pk})
@@ -266,6 +272,15 @@ class ContactUpdateView(OrgRoleRequiredMixin, OrgMixin, UpdateView):
 
     def get_success_url(self):
         return reverse("contacts:detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Contact "{self.object.full_name}" was updated.')
+        return response
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Changes were not saved. Please fix the highlighted fields and try again.")
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

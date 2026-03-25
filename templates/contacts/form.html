@@ -18,8 +18,31 @@
     <span style="color:var(--text-primary);">{{ action }}</span>
   </nav>
 
-  <form method="post" novalidate>
+  <form method="post" novalidate id="contactForm">
     {% csrf_token %}
+
+    {% if form.errors %}
+      <div class="flash flash-error mb-3">
+        Could not save this contact yet. Please review the errors below.
+      </div>
+      <div class="card mb-3" style="border-color:var(--color-danger,#dc2626);">
+        <div class="card-body" style="padding:.75rem 1rem;">
+          <div style="font-weight:600;color:var(--color-danger,#dc2626);margin-bottom:.35rem;">
+            Please fix the following:
+          </div>
+          <ul style="margin:0;padding-left:1rem;color:var(--text-secondary);font-size:.875rem;">
+            {% for field in form %}
+              {% for err in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ err }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for err in form.non_field_errors %}
+              <li>{{ err }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
 
     {% if form.non_field_errors %}
       <div class="flash flash-error mb-3">{{ form.non_field_errors }}</div>
@@ -121,7 +144,7 @@
 
     {# Save / Cancel #}
     <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-primary">
+      <button type="submit" class="btn btn-primary" id="saveContactBtn">
         <i class="bi bi-check-lg"></i> Save Contact
       </button>
       {% if object %}
@@ -133,5 +156,42 @@
 
   </form>
 </div>
+
+<script>
+  (function () {
+    const form = document.getElementById("contactForm");
+    const button = document.getElementById("saveContactBtn");
+    if (!form || !button) return;
+
+    form.addEventListener("submit", function () {
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving...';
+    });
+
+    {% if form.errors %}
+      const erroredIds = [
+        {% for field in form %}
+          {% if field.errors and field.id_for_label %}
+            "{{ field.id_for_label }}",
+          {% endif %}
+        {% endfor %}
+      ];
+
+      let firstInvalid = null;
+      erroredIds.forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.borderColor = "var(--color-danger,#dc2626)";
+        el.style.boxShadow = "0 0 0 2px rgba(220,38,38,.12)";
+        if (!firstInvalid) firstInvalid = el;
+      });
+
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalid.focus();
+      }
+    {% endif %}
+  })();
+</script>
 
 {% endblock %}

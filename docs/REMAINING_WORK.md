@@ -7,6 +7,8 @@ Integration groundwork baseline is complete (`integrations` app, provider connec
 Initial sync orchestration is in place (`manage.py sync_calendar_events`) with event mapping storage.
 Listing sync orchestration is in place (`manage.py sync_listing_data`) with listing-state tracking and optional property/photo updates.
 Sync observability baseline is in place (`IntegrationSyncRun`, retries + exponential backoff, max-failure controls, fail-on-error switches, in-app alerts for failed/high-error runs).
+Shared database schema isolation baseline is in place (`DB_SCHEMA` + `manage.py ensure_db_schema`).
+Shared database isolation deploy gate is in place (`manage.py db_isolation_gate` with optional `--fail-on-warning`).
 
 ## Not Yet Completed
 
