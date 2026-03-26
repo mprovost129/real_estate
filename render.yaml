@@ -3,7 +3,7 @@ services:
     name: real-estate-crm
     runtime: python
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    preDeployCommand: python manage.py migrate --noinput
+    preDeployCommand: python manage.py ensure_db_schema && python manage.py migrate --noinput
     startCommand: gunicorn config.wsgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
@@ -15,4 +15,6 @@ services:
       - key: ALLOWED_HOSTS
         sync: false
       - key: DATABASE_URL
+        sync: false
+      - key: DB_SCHEMA
         sync: false
