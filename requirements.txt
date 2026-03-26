@@ -1,6 +1,7 @@
 asgiref==3.11.1
 Django==6.0.3
 django-environ==0.13.0
+dj-database-url==3.1.2
 gunicorn==25.2.0
 packaging==26.0
 pillow==12.1.1

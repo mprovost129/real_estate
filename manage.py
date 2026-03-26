@@ -4,8 +4,20 @@ import os
 import sys
 
 
+def _normalize_settings_module():
+    """Support shorthand aliases like `prod` and `dev` from hosting env vars."""
+    value = os.environ.get('DJANGO_SETTINGS_MODULE')
+    aliases = {
+        'prod': 'config.settings.prod',
+        'dev': 'config.settings.dev',
+    }
+    if value in aliases:
+        os.environ['DJANGO_SETTINGS_MODULE'] = aliases[value]
+
+
 def main():
     """Run administrative tasks."""
+    _normalize_settings_module()
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
     try:
         from django.core.management import execute_from_command_line

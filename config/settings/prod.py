@@ -3,6 +3,10 @@ Production settings for Real Estate CRM.
 Requires a proper DATABASE_URL, SECRET_KEY, and ALLOWED_HOSTS in the environment.
 Run with: DJANGO_SETTINGS_MODULE=config.settings.prod
 """
+import os
+from pathlib import Path
+
+import dj_database_url
 
 from .base import *  # noqa: F401, F403
 
