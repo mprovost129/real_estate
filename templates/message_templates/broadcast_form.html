@@ -1,0 +1,149 @@
+{% extends "base_app.html" %}
+
+{% block title %}New Broadcast{% endblock %}
+{% block page_title %}New One-Time Broadcast{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Broadcasts
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-12 col-xl-7">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Broadcast Setup</span>
+      </div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="label">Name</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="label">Channel</label>
+              {{ form.channel }}
+            </div>
+            <div class="col-md-6">
+              <label class="label">Template</label>
+              {{ form.template }}
+            </div>
+            <div class="col-12">
+              <label class="label">Saved Segment (Optional)</label>
+              {{ form.filter_segment }}
+              <div style="font-size:.75rem;color:var(--text-muted);margin-top:.2rem;">
+                Select a saved segment to override manual filters below.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="label">Contact Type Filter</label>
+              {{ form.filter_contact_type }}
+            </div>
+            <div class="col-md-6">
+              <label class="label">Assigned Agent Filter</label>
+              {{ form.filter_assigned_to }}
+            </div>
+            <div class="col-12">
+              <label class="label">Tag Filter</label>
+              {{ form.filter_tags }}
+            </div>
+            <div class="col-md-4">
+              <label class="label">City Filter</label>
+              {{ form.filter_city }}
+            </div>
+            <div class="col-md-4">
+              <label class="label">State Filter</label>
+              {{ form.filter_state }}
+            </div>
+            <div class="col-md-4">
+              <label class="label">ZIP Filter</label>
+              {{ form.filter_zip_code }}
+            </div>
+            <div class="col-md-6">
+              <label class="label">Inactivity Window (days)</label>
+              {{ form.filter_inactive_days }}
+            </div>
+            <div class="col-md-6">
+              <label class="label">Schedule For (Optional)</label>
+              {{ form.scheduled_for }}
+            </div>
+            <div class="col-md-6">
+              <label class="d-flex align-items-center gap-2" style="margin-top:1.8rem;">{{ form.approval_required }} Require Approval Before Send</label>
+            </div>
+            <div class="col-md-6">
+              <label class="d-flex align-items-center gap-2" style="margin-top:1.8rem;">{{ form.save_as_segment }} Save as Segment</label>
+            </div>
+            <div class="col-12">
+              <label class="label">Segment Name (if saving)</label>
+              {{ form.segment_name }}
+              {% if form.segment_name.errors %}
+                <div style="color:var(--red-600,#dc2626);font-size:.8rem;">{{ form.segment_name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-12">
+              <label class="d-flex align-items-center gap-2">{{ form.confirm_consent }} {{ form.confirm_consent.label }}</label>
+              {% if form.confirm_consent.errors %}
+                <div style="color:var(--red-600,#dc2626);font-size:.8rem;">{{ form.confirm_consent.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% if form.non_field_errors %}
+            <div style="margin-top:.75rem;color:var(--red-600,#dc2626);font-size:.85rem;">{{ form.non_field_errors|join:", " }}</div>
+          {% endif %}
+          <div style="margin-top:.9rem;display:flex;gap:.5rem;">
+            <button type="submit" name="action" value="preview" class="btn btn-ghost btn-sm">Preview Audience</button>
+            <button type="submit" name="action" value="launch" class="btn btn-primary btn-sm">Send Now</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-5">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Safety Guardrails</span>
+      </div>
+      <div class="card-body">
+        <div style="font-size:.875rem;color:var(--text-muted);line-height:1.45;">
+          <div>Max recipients per send: <strong>{{ max_recipients }}</strong></div>
+          <div style="margin-top:.35rem;">Only contacts with valid channel details are eligible.</div>
+          <div style="margin-top:.35rem;">Opted-out and do-not-contact contacts are excluded.</div>
+          <div style="margin-top:.35rem;">Quiet-hours policy and legal footer enforcement are applied at send time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header">
+        <span class="card-title">Audience Preview</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if preview_count is not None %}
+          <div style="padding:.65rem 0;font-size:.9rem;">
+            Eligible recipients: <strong>{{ preview_count }}</strong>
+          </div>
+          {% for contact in preview_contacts %}
+            <div style="padding:.55rem 0;border-top:1px solid var(--border-muted);">
+              <div style="font-weight:600;">{{ contact.full_name }}</div>
+              <div style="font-size:.78rem;color:var(--text-muted);">
+                {% if contact.primary_email %}{{ contact.primary_email }}{% endif %}
+                {% if contact.primary_phone %} {% if contact.primary_email %}·{% endif %} {{ contact.primary_phone }}{% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div style="padding:.75rem 0;color:var(--text-muted);">No recipients match this audience.</div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:.9rem 0;color:var(--text-muted);font-size:.85rem;">
+            Use "Preview Audience" to validate recipient count before sending.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -18,6 +18,7 @@
 <div class="row g-3 mb-4">
 
   <div class="col-6 col-lg-3">
+    <a href="{% url 'contacts:list' %}" style="text-decoration:none;display:block;">
     <div class="stat-card">
       <div class="d-flex align-items-start justify-content-between">
         <div>
@@ -30,10 +31,11 @@
         </div>
       </div>
     </div>
+    </a>
   </div>
 
   <div class="col-6 col-lg-3">
-    <a href="{% url 'transactions:list' %}" style="text-decoration:none;">
+    <a href="{% url 'transactions:list' %}?tab=active" style="text-decoration:none;display:block;">
     <div class="stat-card">
       <div class="d-flex align-items-start justify-content-between">
         <div>
@@ -50,6 +52,7 @@
   </div>
 
   <div class="col-6 col-lg-3">
+    <a href="{% url 'tasks:list' %}?tab=today&assigned=me" style="text-decoration:none;display:block;">
     <div class="stat-card">
       <div class="d-flex align-items-start justify-content-between">
         <div>
@@ -62,9 +65,11 @@
         </div>
       </div>
     </div>
+    </a>
   </div>
 
   <div class="col-6 col-lg-3">
+    <a href="{% url 'tasks:list' %}?tab=overdue&assigned=me" style="text-decoration:none;display:block;">
     <div class="stat-card {% if overdue_task_count %}border-danger{% endif %}">
       <div class="d-flex align-items-start justify-content-between">
         <div>
@@ -79,6 +84,7 @@
         </div>
       </div>
     </div>
+    </a>
   </div>
 
 </div>

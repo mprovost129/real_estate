@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import User
+from .models import AgentPublicProfile, PublicListingCard, User
 
 
 @admin.register(User)
@@ -27,5 +27,19 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
 
-    # email is the USERNAME_FIELD — no username column
+    # email is the USERNAME_FIELD - no username column
     filter_horizontal = ("groups", "user_permissions")
+
+
+@admin.register(AgentPublicProfile)
+class AgentPublicProfileAdmin(admin.ModelAdmin):
+    list_display = ["slug", "user", "organization", "is_published", "updated_at"]
+    list_filter = ["is_published", "organization"]
+    search_fields = ["slug", "agent_display_name", "user__email", "organization__name", "broker_name"]
+
+
+@admin.register(PublicListingCard)
+class PublicListingCardAdmin(admin.ModelAdmin):
+    list_display = ["mls_id", "profile", "status", "is_active", "is_featured", "updated_at"]
+    list_filter = ["status", "is_active", "is_featured"]
+    search_fields = ["mls_id", "address", "city", "state", "profile__slug", "profile__user__email"]

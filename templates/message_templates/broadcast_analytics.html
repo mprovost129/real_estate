@@ -1,0 +1,107 @@
+{% extends "base_app.html" %}
+
+{% block title %}Broadcast Analytics{% endblock %}
+{% block page_title %}Broadcast Analytics{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-arrow-left"></i> Back to Broadcasts
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-label">Total Deliveries ({{ lookback_days }}d)</div>
+      <div class="stat-value">{{ total_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-label">Sent</div>
+      <div class="stat-value">{{ sent_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-label">Failed</div>
+      <div class="stat-value">{{ failed_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-label">Skipped</div>
+      <div class="stat-value">{{ skipped_count }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-xl-6">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Daily Trend ({{ lookback_days }} days)</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if trend %}
+          {% for row in trend %}
+            <div style="padding:.55rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;gap:.75rem;">
+              <div style="font-size:.82rem;color:var(--text-muted);">{{ row.day }}</div>
+              <div style="font-size:.82rem;">
+                <span>Sent: <strong>{{ row.sent }}</strong></span>
+                <span style="margin-left:.5rem;">Failed: <strong>{{ row.failed }}</strong></span>
+                <span style="margin-left:.5rem;">Skipped: <strong>{{ row.skipped }}</strong></span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No delivery data in the selected window.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-6">
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title">Top Templates</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if top_templates %}
+          {% for row in top_templates %}
+            <div style="padding:.55rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;gap:.75rem;">
+              <div style="font-weight:600;">{{ row.template__name|default:"(No template)" }}</div>
+              <div style="font-size:.82rem;color:var(--text-muted);">
+                Sent {{ row.sent_total|default:0 }} · Failed {{ row.failed_total|default:0 }} · Broadcasts {{ row.broadcasts }}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No template usage yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Top Segments</span>
+      </div>
+      <div class="card-body" style="padding:.25rem 1.25rem;">
+        {% if top_segments %}
+          {% for row in top_segments %}
+            <div style="padding:.55rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;gap:.75rem;">
+              <div style="font-weight:600;">{{ row.filter_segment__name|default:"(No segment)" }}</div>
+              <div style="font-size:.82rem;color:var(--text-muted);">
+                Sent {{ row.sent_total|default:0 }} · Failed {{ row.failed_total|default:0 }} · Broadcasts {{ row.broadcasts }}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--text-muted);">No saved segment usage yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

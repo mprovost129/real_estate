@@ -4,6 +4,9 @@
 {% block page_title %}Drip Campaigns{% endblock %}
 
 {% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-megaphone"></i> One-Time Broadcasts
+  </a>
   <a href="{% url 'message_templates:list' %}" class="btn btn-ghost btn-sm">
     <i class="bi bi-envelope-paper"></i> Templates
   </a>

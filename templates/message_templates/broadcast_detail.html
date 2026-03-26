@@ -1,0 +1,64 @@
+{% extends "base_app.html" %}
+
+{% block title %}{{ broadcast.name }}{% endblock %}
+{% block page_title %}Broadcast: {{ broadcast.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-arrow-left"></i> Back
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div style="display:flex;flex-wrap:wrap;gap:1rem;font-size:.9rem;">
+      <div><strong>Channel:</strong> {{ broadcast.get_channel_display }}</div>
+      <div><strong>Template:</strong> {{ broadcast.template.name }}</div>
+      <div><strong>Status:</strong> {{ broadcast.get_status_display }}</div>
+      <div><strong>Approval:</strong> {{ broadcast.get_approval_status_display }}</div>
+      <div><strong>Scheduled For:</strong> {% if broadcast.scheduled_for %}{{ broadcast.scheduled_for|date:"Y-m-d H:i" }}{% else %}Immediate{% endif %}</div>
+      {% if broadcast.filter_segment %}<div><strong>Segment:</strong> {{ broadcast.filter_segment.name }}</div>{% endif %}
+      <div><strong>Recipients:</strong> {{ broadcast.recipient_count }}</div>
+      <div><strong>Sent:</strong> {{ broadcast.sent_count }}</div>
+      <div><strong>Failed:</strong> {{ broadcast.failed_count }}</div>
+      <div><strong>Skipped:</strong> {{ broadcast.skipped_count }}</div>
+    </div>
+    <div style="margin-top:.85rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+      {% if broadcast.approval_required and broadcast.approval_status == "pending" %}
+        <form method="post" action="{% url 'message_templates:broadcast_approve' broadcast.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost btn-sm">Approve Broadcast</button>
+        </form>
+      {% endif %}
+      {% if not has_deliveries and broadcast.approval_status != "pending" %}
+        <form method="post" action="{% url 'message_templates:broadcast_send_now' broadcast.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">Send Now</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Deliveries</span>
+  </div>
+  <div class="card-body" style="padding:.25rem 1.25rem;">
+    {% if deliveries %}
+      {% for d in deliveries %}
+        <div style="padding:.65rem 0;border-bottom:1px solid var(--border-muted);">
+          <div style="font-weight:600;">{{ d.contact.full_name }} &middot; {{ d.get_status_display }}</div>
+          <div style="font-size:.78rem;color:var(--text-muted);">{{ d.created_at|date:"Y-m-d H:i" }}</div>
+          {% if d.detail %}
+            <div style="font-size:.8rem;color:var(--text-secondary);margin-top:.2rem;">{{ d.detail }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:1rem 0;color:var(--text-muted);">No deliveries logged.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

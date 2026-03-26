@@ -1,0 +1,158 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ profile.page_title|default:profile.public_name }}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}" />
+  <style>
+    :root { --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e2e8f0; --brand:#0f766e; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width:1100px; margin:0 auto; padding:1rem; }
+    .hero { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; display:grid; gap:1rem; grid-template-columns:96px 1fr auto; align-items:center; }
+    .photo { width:96px; height:96px; border-radius:50%; object-fit:cover; background:#e2e8f0; }
+    .broker-logo { max-height:56px; max-width:180px; object-fit:contain; }
+    .name { margin:0; font-size:1.4rem; }
+    .headline { color:var(--muted); margin:.2rem 0 0; }
+    .meta { color:var(--muted); font-size:.9rem; margin-top:.3rem; }
+    .bio { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; margin-top:1rem; white-space:pre-line; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; margin-top:1rem; }
+    .cards { margin-top:1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .img { width:100%; height:180px; object-fit:cover; background:#e2e8f0; }
+    .body { padding:.75rem .9rem; }
+    .price { font-size:1.1rem; font-weight:700; margin:0 0 .25rem; color:var(--brand); }
+    .addr { margin:0 0 .35rem; font-size:.95rem; }
+    .meta-row { color:var(--muted); font-size:.82rem; }
+    .grid { display:grid; gap:.75rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .grid .full { grid-column:1/-1; }
+    .input { width:100%; border:1px solid var(--line); border-radius:8px; padding:.6rem .7rem; font-size:.92rem; }
+    .btn { border:none; border-radius:8px; padding:.58rem .9rem; cursor:pointer; background:var(--brand); color:#fff; font-weight:600; }
+    .muted { color:var(--muted); font-size:.85rem; }
+    .empty { background:var(--card); border:1px dashed var(--line); border-radius:12px; padding:1rem; color:var(--muted); }
+    .alert { border-radius:10px; padding:.75rem .9rem; margin-top:1rem; font-size:.9rem; }
+    .alert-ok { background:#ecfdf3; color:#166534; border:1px solid #bbf7d0; }
+    .alert-error { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .card-actions { margin-top:.6rem; display:flex; gap:.45rem; flex-wrap:wrap; }
+    .link-btn { text-decoration:none; border:1px solid var(--line); color:var(--text); border-radius:7px; padding:.35rem .6rem; font-size:.82rem; }
+    @media (max-width:720px) {
+      .hero { grid-template-columns:72px 1fr; }
+      .broker { grid-column:1/-1; }
+      .photo { width:72px; height:72px; }
+      .grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      {% if profile.agent_photo %}
+        <img class="photo" src="{{ profile.agent_photo.url }}" alt="{{ profile.public_name }}" />
+      {% else %}
+        <div class="photo"></div>
+      {% endif %}
+      <div>
+        <h1 class="name">{{ profile.public_name }}</h1>
+        {% if profile.agent_headline %}<p class="headline">{{ profile.agent_headline }}</p>{% endif %}
+        <div class="meta">
+          {% if profile.broker_name %}{{ profile.broker_name }}{% endif %}
+          {% if profile.contact_phone %} &middot; {{ profile.contact_phone }}{% endif %}
+          {% if profile.contact_email %} &middot; {{ profile.contact_email }}{% endif %}
+        </div>
+      </div>
+      <div class="broker">
+        {% if profile.broker_logo %}
+          <img class="broker-logo" src="{{ profile.broker_logo.url }}" alt="{{ profile.broker_name|default:'Broker Logo' }}" />
+        {% endif %}
+      </div>
+    </section>
+
+    {% if profile.agent_bio %}
+      <section class="bio">{{ profile.agent_bio }}</section>
+    {% endif %}
+
+    {% if inquiry_submitted %}
+      <div class="alert alert-ok">Inquiry sent. The agent will follow up shortly.</div>
+    {% endif %}
+
+    {% if is_preview %}
+      <div class="alert alert-ok">Preview mode: this page is not published to the public yet.</div>
+    {% endif %}
+
+    {% if inquiry_form.errors %}
+      <div class="alert alert-error">Please correct the form and try again.</div>
+    {% endif %}
+
+    <section class="panel">
+      <h2 style="margin:0 0 .25rem;font-size:1.1rem;">Contact {{ profile.public_name }}</h2>
+      <p class="muted" style="margin:0 0 .8rem;">Ask about a listing or request a showing.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="grid">
+          <div>
+            <label class="muted">Your Name</label>
+            {{ inquiry_form.full_name }}
+            {% if inquiry_form.full_name.errors %}<div class="muted" style="color:#991b1b;">{{ inquiry_form.full_name.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label class="muted">Email</label>
+            {{ inquiry_form.email }}
+            {% if inquiry_form.email.errors %}<div class="muted" style="color:#991b1b;">{{ inquiry_form.email.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label class="muted">Phone</label>
+            {{ inquiry_form.phone }}
+            {% if inquiry_form.phone.errors %}<div class="muted" style="color:#991b1b;">{{ inquiry_form.phone.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label class="muted">Listing</label>
+            {{ inquiry_form.target_mls_id }}
+            {% if inquiry_form.target_mls_id.errors %}<div class="muted" style="color:#991b1b;">{{ inquiry_form.target_mls_id.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="full">
+            <label class="muted">Message</label>
+            {{ inquiry_form.message }}
+            {% if inquiry_form.message.errors %}<div class="muted" style="color:#991b1b;">{{ inquiry_form.message.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div style="display:none;">{{ inquiry_form.company }}</div>
+          {% if inquiry_form.non_field_errors %}
+            <div class="full muted" style="color:#991b1b;">{{ inquiry_form.non_field_errors|join:", " }}</div>
+          {% endif %}
+          <div class="full">
+            <button class="btn" type="submit">Send Inquiry</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="cards">
+      {% for card in cards %}
+        <article class="card">
+          {% if card.photo_url %}<img class="img" src="{{ card.photo_url }}" alt="{{ card.address|default:card.title|default:card.mls_id }}" />{% else %}<div class="img"></div>{% endif %}
+          <div class="body">
+            <p class="price">{% if card.price %}${{ card.price|floatformat:0 }}{% else %}Price on request{% endif %}</p>
+            <p class="addr">{{ card.address|default:card.title|default:"Listing" }}</p>
+            <div class="meta-row">
+              {% if card.city %}{{ card.city }}{% if card.state %}, {{ card.state }}{% endif %}{% endif %}
+              {% if card.postal_code %} {{ card.postal_code }}{% endif %}
+            </div>
+            <div class="meta-row" style="margin-top:.3rem;">
+              MLS {{ card.mls_id }} &middot; {{ card.get_status_display }}
+            </div>
+            <div class="card-actions">
+              <a class="link-btn" href="?mls={{ card.mls_id }}">Ask About This Listing</a>
+              {% if card.details_url %}
+                <a class="link-btn" href="{{ card.details_url }}" target="_blank" rel="noopener">Listing Details</a>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty">No active listings are currently available.</div>
+      {% endfor %}
+    </section>
+  </div>
+</body>
+</html>

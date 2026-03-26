@@ -1,19 +1,17 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from compliance.audit import log_audit_event
 from .models import Membership, Organization
 from .permissions import CAPABILITY_LABELS, ROLE_CAPABILITIES, has_capability
+from .ops import run_ops_health_check
+from .utils import get_active_membership, set_active_org
 
 
 def _get_membership(request):
-    return (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    return get_active_membership(request)
 
 
 # ------------------------------------------------------------------ #
@@ -236,3 +234,55 @@ def team_member_remove(request, pk):
         )
 
     return redirect("team_settings")
+
+
+@login_required
+def switch_workspace(request):
+    if request.method != "POST":
+        return redirect("dashboard")
+
+    org_id = request.POST.get("organization_id")
+    candidate_next = request.POST.get("next") or request.META.get("HTTP_REFERER")
+    next_url = "dashboard"
+    if candidate_next and url_has_allowed_host_and_scheme(
+        url=candidate_next,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = candidate_next
+
+    membership = set_active_org(request, organization_id=org_id)
+    if not membership:
+        messages.error(request, "Could not switch workspace. You are not a member of that organization.")
+        return redirect(next_url)
+
+    messages.success(request, f'Workspace switched to "{membership.organization.name}".')
+    return redirect(next_url)
+
+
+@login_required
+def ops_center(request):
+    membership = _get_membership(request)
+    if not membership:
+        return redirect("dashboard")
+    if not has_capability(membership, "manage_organization_settings"):
+        messages.error(request, "You do not have permission to access Ops Center.")
+        return redirect("dashboard")
+
+    org = membership.organization
+    report = None
+    if request.method == "POST":
+        report = run_ops_health_check(organization=org)
+        if report["overall"] == "pass":
+            messages.success(request, "Ops health check passed.")
+        elif report["overall"] == "warn":
+            messages.warning(request, "Ops health check completed with warnings.")
+        else:
+            messages.error(request, "Ops health check found failures.")
+
+    return render(request, "settings/ops_center.html", {
+        "org": org,
+        "membership": membership,
+        "active_section": "ops",
+        "report": report,
+    })

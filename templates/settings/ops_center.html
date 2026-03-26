@@ -1,0 +1,62 @@
+{% extends "settings/base_settings.html" %}
+
+{% block settings_content %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div>
+      <div class="card-title">Ops Center</div>
+      <div style="font-size:.8125rem;color:var(--text-muted);">
+        Run a SaaS-wide smoke suite to verify core app health.
+      </div>
+    </div>
+    <form method="post" style="margin:0;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-play-circle me-1"></i> Run Full Health Check
+      </button>
+    </form>
+  </div>
+  <div class="card-body">
+    {% if report %}
+      <div class="d-flex gap-2 align-items-center mb-3" style="font-size:.875rem;">
+        <span class="badge {% if report.overall == 'pass' %}bg-success{% elif report.overall == 'warn' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+          {{ report.overall|upper }}
+        </span>
+        <span>Pass: {{ report.counts.pass }}</span>
+        <span>Warnings: {{ report.counts.warn }}</span>
+        <span>Failures: {{ report.counts.fail }}</span>
+        <span style="color:var(--text-muted);">Ran: {{ report.ran_at|date:"Y-m-d H:i:s T" }}</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th style="width:140px;">Status</th>
+              <th style="width:220px;">Check</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in report.results %}
+              <tr>
+                <td>
+                  <span class="badge {% if item.status == 'pass' %}bg-success{% elif item.status == 'warn' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                    {{ item.status|upper }}
+                  </span>
+                </td>
+                <td>{{ item.label }}</td>
+                <td style="font-size:.8125rem;color:var(--text-secondary);">{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="margin:0;color:var(--text-muted);font-size:.875rem;">
+        No health run yet. Click <strong>Run Full Health Check</strong> to execute diagnostics.
+      </p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

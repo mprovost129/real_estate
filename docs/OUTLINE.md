@@ -27,6 +27,7 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Contact soft delete
 - [x] Contact CSV import with header mapping + duplicate handling
 - [x] Contact CSV export
+- [x] Public agent-page inquiry capture (creates/updates lead contact, logs inquiry note, and creates follow-up task)
 
 ### 3) Lead Capture
 - [x] Public lead capture forms with per-form field configuration
@@ -60,6 +61,11 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Outbound email send from contact detail (SMTP/backend configured in Django settings)
 - [x] SMS send from contact detail via provider integration (console/twilio backend)
 - [x] Drip/campaign sending engine v1 (campaigns, steps, enrollments, send logs, runner command)
+- [x] One-time mass outreach v1 (email/SMS audience preview, consent checkpoint, guardrail send limit, delivery logs)
+- [x] Broadcast scheduling + approval baseline (schedule time, pending/approved states, second-approver guardrail, scheduled runner command)
+- [x] Advanced segmentation baseline for broadcasts (tags, geography, inactivity window, and reusable saved segments)
+- [x] Broadcast compliance controls baseline (quiet-hours skip policy + legal footer enforcement + explicit suppression logging)
+- [x] Broadcast analytics dashboard baseline (delivery trend, status totals, top templates, top segments)
 
 ### 7) Properties, Open Houses, Transactions
 - [x] Property records with listing details and photos
@@ -153,6 +159,12 @@ This document tracks what is implemented in the app today and what remains.
 - [x] Added shared-database schema isolation support (`DB_SCHEMA`) and `manage.py ensure_db_schema` helper command for safer multi-site deployments.
 - [x] Added startup/system-check warning for unsafe hosted config when `DB_SCHEMA=public` (`organizations.W001`).
 - [x] Added deploy gate command for schema isolation (`manage.py db_isolation_gate [--json] [--fail-on-warning]`).
+- [x] Added active workspace switching (session-backed `active_org_id`) with sidebar selector and unified org resolution across core modules.
+- [x] Hardened workspace switch redirect handling to block unsafe external `next` URLs.
+- [x] Added dedicated SaaS Ops Center (`/settings/ops/`) with one-click full health check reporting and matching `manage.py ops_health_check` command.
+- [x] Added public agent page foundation (`/public/agents/<slug>/`) with agent/broker branding profile and MLS-ID listing cards managed from Settings.
+- [x] Added public agent-page lead capture form (visitor inquiry -> contact + system note + agent follow-up task).
+- [x] Added manual listing fallback editor for public listing cards when MLS hydration is unavailable.
 
 ## Next Build Queue (recommended order)
 1. Calendar and listing provider implementations

@@ -9,6 +9,17 @@ Listing sync orchestration is in place (`manage.py sync_listing_data`) with list
 Sync observability baseline is in place (`IntegrationSyncRun`, retries + exponential backoff, max-failure controls, fail-on-error switches, in-app alerts for failed/high-error runs).
 Shared database schema isolation baseline is in place (`DB_SCHEMA` + `manage.py ensure_db_schema`).
 Shared database isolation deploy gate is in place (`manage.py db_isolation_gate` with optional `--fail-on-warning`).
+Active workspace selection baseline is in place (session-backed org switcher + unified resolver wiring across core modules).
+Dedicated Ops Center baseline is in place (in-app full health check runner + `manage.py ops_health_check` automation hook).
+Public agent page baseline is in place (agent/broker profile sections and MLS-ID listing cards with close-out controls).
+MLS lookup adapter now supports MLS Grid-style OData payload parsing (`value[]`, `Media`, `MlgCanView`, `MlgCanUse`) with public-display safety guards.
+Public agent-page inquiry capture is in place (visitor inquiry -> contact/note/task in CRM).
+Manual listing fallback editor is in place for public cards when MLS auto-fill does not return data.
+One-time mass outreach baseline is in place (broadcast UI + recipient preview + consent confirmation + delivery logs).
+Broadcast scheduling and approval baseline is in place (pending approval queue + `run_scheduled_broadcasts` command processing due approved sends).
+Advanced segmentation baseline is in place for broadcasts (tags, geography, inactivity windows, saved audience segments).
+Broadcast compliance controls baseline is in place (quiet-hours suppression and legal footer enforcement).
+Broadcast analytics dashboard baseline is in place (delivery totals, trend view, top templates/segments).
 
 ## Not Yet Completed
 
@@ -18,6 +29,9 @@ Shared database isolation deploy gate is in place (`manage.py db_isolation_gate`
 - Calendar bi-directional sync hardening (create/update local objects from remote events, conflict resolution UX)
 - Voice/call provider integration
 - E-sign/document storage integration
+
+### Communications
+- Advanced engagement analytics (opens/clicks/replies and campaign-level attribution)
 
 ## Recommended Next Build Order
 1. Calendar and listing provider implementations

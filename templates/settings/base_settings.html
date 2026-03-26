@@ -14,6 +14,10 @@
            class="settings-nav-link {% if active_section == 'profile' %}active{% endif %}">
           <i class="bi bi-person-circle me-2"></i> Profile
         </a>
+        <a href="{% url 'public_page_settings' %}"
+           class="settings-nav-link {% if active_section == 'public_page' %}active{% endif %}">
+          <i class="bi bi-globe2 me-2"></i> Public Agent Page
+        </a>
         {% if org_capabilities.manage_organization_settings %}
           <a href="{% url 'org_settings' %}"
              class="settings-nav-link {% if active_section == 'organization' %}active{% endif %}">
@@ -30,6 +34,10 @@
           <a href="{% url 'integrations:settings' %}"
              class="settings-nav-link {% if active_section == 'integrations' %}active{% endif %}">
             <i class="bi bi-plug me-2"></i> Integrations
+          </a>
+          <a href="{% url 'ops_center' %}"
+             class="settings-nav-link {% if active_section == 'ops' %}active{% endif %}">
+            <i class="bi bi-activity me-2"></i> Ops Center
           </a>
         {% endif %}
         <div style="height:1px;background:var(--border-muted);margin:.375rem .75rem;"></div>

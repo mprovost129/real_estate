@@ -29,6 +29,8 @@ urlpatterns = [
 
     # Settings
     path("settings/profile/",                   user_views.profile_settings,            name="profile_settings"),
+    path("settings/workspace/switch/",          org_views.switch_workspace,             name="switch_workspace"),
+    path("settings/ops/",                       org_views.ops_center,                   name="ops_center"),
     path("settings/organization/",              org_views.org_settings,                 name="org_settings"),
     path("settings/team/",                      org_views.team_settings,                name="team_settings"),
     path("settings/integrations/",              include(("integrations.urls", "integrations"), namespace="integrations")),

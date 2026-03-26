@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_date
 
 from organizations.models import Membership
 from organizations.permissions import require_org_role
+from organizations.utils import get_active_membership
 
 from .audit import log_audit_event
 from .export_utils import (
@@ -26,12 +27,7 @@ from .models import AuditEvent, ComplianceExport, CompliancePolicy
 
 
 def _get_org(request):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     return membership.organization if membership else None
 
 

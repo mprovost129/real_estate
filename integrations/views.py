@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from organizations.models import Membership
 from organizations.permissions import require_org_role
+from organizations.utils import get_active_membership
 
 from .forms import IntegrationConnectionForm
 from .models import IntegrationConnection
@@ -16,12 +17,7 @@ from .services.oauth import (
 
 
 def _get_org(request):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     return membership.organization if membership else None
 
 

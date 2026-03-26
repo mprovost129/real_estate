@@ -19,4 +19,6 @@ urlpatterns = [
     # Password change (logged in)
     path("password/change/", views.CustomPasswordChangeView.as_view(), name="password_change"),
     path("password/change/done/", views.CustomPasswordChangeDoneView.as_view(), name="password_change_done"),
+    path("settings/public-page/", views.public_page_settings, name="public_page_settings"),
+    path("public/agents/<slug:slug>/", views.public_agent_page, name="public_agent_page"),
 ]

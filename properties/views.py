@@ -9,6 +9,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from compliance.audit import log_audit_event
 from organizations.models import Membership
 from organizations.permissions import OrgRoleRequiredMixin, require_org_role
+from organizations.utils import get_active_membership
 from .forms import PropertyForm, PropertyNoteForm
 from .models import Property, PropertyNote, PropertyPhoto
 
@@ -20,12 +21,7 @@ from .models import Property, PropertyNote, PropertyPhoto
 class OrgMixin(LoginRequiredMixin):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        membership = (
-            request.user.memberships
-            .filter(is_active=True)
-            .select_related("organization")
-            .first()
-        )
+        membership = get_active_membership(request)
         self.org = membership.organization if membership else None
 
     def get_context_data(self, **kwargs):
@@ -35,7 +31,7 @@ class OrgMixin(LoginRequiredMixin):
 
 
 def _get_org(request):
-    m = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    m = get_active_membership(request)
     return m.organization if m else None
 
 

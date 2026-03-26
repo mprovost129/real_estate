@@ -12,6 +12,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from compliance.audit import log_audit_event
 from organizations.models import Membership
 from organizations.permissions import OrgRoleRequiredMixin, require_org_role
+from organizations.utils import get_active_membership
 from .forms import TaskCompleteForm, TaskForm, TaskSnoozeForm
 from .models import Task
 
@@ -21,24 +22,14 @@ from .models import Task
 # ------------------------------------------------------------------ #
 
 def _get_org(request):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     return membership.organization if membership else None
 
 
 class OrgMixin(LoginRequiredMixin):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        membership = (
-            request.user.memberships
-            .filter(is_active=True)
-            .select_related("organization")
-            .first()
-        )
+        membership = get_active_membership(request)
         self.org = membership.organization if membership else None
         self.membership = membership
 

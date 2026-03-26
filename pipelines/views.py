@@ -8,30 +8,21 @@ from django.views.generic import CreateView, DetailView, UpdateView
 from compliance.audit import log_audit_event
 from organizations.models import Membership
 from organizations.permissions import OrgRoleRequiredMixin, require_org_role
+from organizations.utils import get_active_membership
 from .forms import DealForm, DealMoveForm
 from .models import Deal, Pipeline, PipelineStage, StageHistory
 from .requirements import can_enter_stage, evaluate_stage_requirements, provision_stage_tasks
 
 
 def _get_org(request):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     return membership.organization if membership else None
 
 
 class OrgMixin(LoginRequiredMixin):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        membership = (
-            request.user.memberships
-            .filter(is_active=True)
-            .select_related("organization")
-            .first()
-        )
+        membership = get_active_membership(request)
         self.org = membership.organization if membership else None
 
     def get_context_data(self, **kwargs):
@@ -43,12 +34,7 @@ class OrgMixin(LoginRequiredMixin):
 @login_required
 def board_view(request, pipeline_pk=None):
     """Main kanban board. Shows one pipeline at a time."""
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
 
     pipelines = Pipeline.objects.filter(organization=org, is_active=True).order_by("pipeline_type")
@@ -195,10 +181,7 @@ class DealDetailView(OrgMixin, DetailView):
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def deal_move(request, pk):
     """POST: move a deal to a new stage, record history."""
-    membership = (
-        request.user.memberships.filter(is_active=True)
-        .select_related("organization").first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
     deal = get_object_or_404(Deal, pk=pk, organization=org)
 
@@ -295,10 +278,7 @@ def deal_move(request, pk):
 @login_required
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def deal_delete(request, pk):
-    membership = (
-        request.user.memberships.filter(is_active=True)
-        .select_related("organization").first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
     deal = get_object_or_404(Deal, pk=pk, organization=org)
     pipeline_pk = deal.pipeline.pk

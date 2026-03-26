@@ -174,3 +174,151 @@ class CampaignSendLog(OrgScopedModel):
     @property
     def campaign_name(self):
         return self.enrollment.campaign.name
+
+
+class OneTimeBroadcast(OrgScopedModel):
+    class Channel(models.TextChoices):
+        EMAIL = "email", "Email"
+        SMS = "sms", "SMS"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        SCHEDULED = "scheduled", "Scheduled"
+        COMPLETED = "completed", "Completed"
+        PARTIAL = "partial", "Completed With Failures"
+        FAILED = "failed", "Failed"
+
+    class ApprovalStatus(models.TextChoices):
+        NOT_REQUIRED = "not_required", "Not Required"
+        PENDING = "pending", "Pending Approval"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    name = models.CharField(max_length=200)
+    channel = models.CharField(max_length=10, choices=Channel.choices, default=Channel.EMAIL)
+    template = models.ForeignKey(
+        MessageTemplate,
+        on_delete=models.PROTECT,
+        related_name="one_time_broadcasts",
+    )
+    filter_contact_type = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Optional filter by contact type.",
+    )
+    filter_segment = models.ForeignKey(
+        "message_templates.AudienceSegment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="broadcasts",
+    )
+    filter_assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="one_time_broadcast_filters",
+    )
+    filter_tags = models.ManyToManyField(
+        "contacts.Tag",
+        blank=True,
+        related_name="one_time_broadcasts",
+    )
+    filter_city = models.CharField(max_length=100, blank=True)
+    filter_state = models.CharField(max_length=50, blank=True)
+    filter_zip_code = models.CharField(max_length=20, blank=True)
+    filter_inactive_days = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=Status.choices, default=Status.DRAFT)
+    recipient_count = models.PositiveIntegerField(default=0)
+    sent_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    skipped_count = models.PositiveIntegerField(default=0)
+    launched_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    scheduled_for = models.DateTimeField(null=True, blank=True)
+    approval_required = models.BooleanField(default=False)
+    approval_status = models.CharField(
+        max_length=20,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.NOT_REQUIRED,
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="one_time_broadcasts_approved",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="one_time_broadcasts_created",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("organization", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class AudienceSegment(OrgScopedModel):
+    name = models.CharField(max_length=180)
+    contact_type = models.CharField(max_length=20, blank=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audience_segments",
+    )
+    tags = models.ManyToManyField(
+        "contacts.Tag",
+        blank=True,
+        related_name="audience_segments",
+    )
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=50, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True)
+    inactive_days = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = [("organization", "name")]
+
+    def __str__(self):
+        return self.name
+
+
+class OneTimeBroadcastDelivery(OrgScopedModel):
+    class Status(models.TextChoices):
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    broadcast = models.ForeignKey(
+        OneTimeBroadcast,
+        on_delete=models.CASCADE,
+        related_name="deliveries",
+    )
+    contact = models.ForeignKey(
+        "contacts.Contact",
+        on_delete=models.CASCADE,
+        related_name="one_time_broadcast_deliveries",
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.SENT)
+    detail = models.TextField(blank=True)
+    provider_message_id = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("broadcast", "contact")]
+
+    def __str__(self):
+        return f"{self.broadcast.name}: {self.contact.full_name} ({self.status})"

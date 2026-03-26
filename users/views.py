@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.contrib.auth.views import (
     PasswordChangeDoneView,
     PasswordChangeView,
@@ -11,14 +12,22 @@ from django.contrib.auth.views import (
 )
 from django.db.models import Q
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from organizations.models import Membership
+from organizations.utils import get_active_membership
 
 from .forms import (
+    AddPublicListingByMlsForm,
+    AgentPublicProfileForm,
     CustomPasswordResetForm,
     CustomSetPasswordForm,
     LoginForm,
+    PublicAgentInquiryForm,
+    PublicListingCardForm,
     RegistrationForm,
 )
+from .models import AgentPublicProfile, PublicListingCard
 
 
 def login_view(request):
@@ -69,7 +78,7 @@ def dashboard_view(request):
 
     org = getattr(request, "_current_org", None)
     if org is None:
-        membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+        membership = get_active_membership(request)
         org = membership.organization if membership else None
 
     today = timezone.localdate()
@@ -77,7 +86,7 @@ def dashboard_view(request):
 
     if org:
         # ---- stat cards ----
-        ctx["contact_count"]    = Contact.objects.for_org(org).count()
+        ctx["contact_count"]    = Contact.objects.for_org(org).filter(is_active=True).count()
         ctx["open_deal_count"]  = Deal.objects.for_org(org).filter(status=Deal.Status.ACTIVE).count()
         ctx["tasks_today"]      = (
             Task.objects.for_org(org)
@@ -181,12 +190,7 @@ def calendar_view(request):
     from tasks.models import Task
     from transactions.models import Transaction
 
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
 
     today = date.today()
@@ -331,12 +335,7 @@ def global_search(request):
     from transactions.models import Transaction
     from tasks.models import Task
 
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
 
     q = request.GET.get("q", "").strip()
@@ -463,12 +462,7 @@ class CustomPasswordChangeDoneView(PasswordChangeDoneView):
 def profile_settings(request):
     from organizations.forms import UserProfileForm
 
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
 
     form = UserProfileForm(
         user=request.user,
@@ -490,3 +484,336 @@ def profile_settings(request):
         "membership": membership,
         "active_section": "profile",
     })
+
+
+def _resolve_listing_status(raw_status: str):
+    value = (raw_status or "").strip().lower()
+    if value in {"active"}:
+        return PublicListingCard.ListingStatus.ACTIVE, True
+    if value in {"pending", "under_contract", "under contract"}:
+        return PublicListingCard.ListingStatus.PENDING, True
+    if value in {"coming_soon", "coming soon"}:
+        return PublicListingCard.ListingStatus.COMING_SOON, True
+    if value in {"sold", "closed", "expired", "cancelled", "canceled"}:
+        return PublicListingCard.ListingStatus.CLOSED, False
+    if value in {"off_market", "off market", "withdrawn"}:
+        return PublicListingCard.ListingStatus.OFF_MARKET, False
+    return PublicListingCard.ListingStatus.ACTIVE, True
+
+
+def _split_full_name(full_name: str):
+    raw = (full_name or "").strip()
+    if not raw:
+        return "Website", "Lead"
+    parts = raw.split()
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
+
+
+@login_required
+def public_page_settings(request):
+    membership = get_active_membership(request)
+    if not membership:
+        messages.error(request, "No active workspace selected.")
+        return redirect("dashboard")
+
+    org = membership.organization
+    profile, _ = AgentPublicProfile.objects.get_or_create(
+        organization=org,
+        user=request.user,
+        defaults={
+            "agent_display_name": request.user.full_name,
+            "contact_email": request.user.email,
+            "contact_phone": request.user.phone,
+            "broker_name": org.name,
+            "page_title": f"{request.user.full_name or request.user.email} Listings",
+        },
+    )
+    if not profile.broker_name:
+        profile.broker_name = org.name
+        profile.save(update_fields=["broker_name", "updated_at"])
+
+    profile_form = AgentPublicProfileForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=profile,
+        prefix="profile",
+    )
+    add_listing_form = AddPublicListingByMlsForm(request.POST or None, prefix="add")
+    selected_card_id = request.GET.get("edit_card") or request.POST.get("card_id")
+    selected_card = PublicListingCard.objects.filter(profile=profile, pk=selected_card_id).first() if selected_card_id else None
+    card_form = PublicListingCardForm(
+        request.POST or None,
+        instance=selected_card,
+        prefix="card",
+    ) if selected_card else None
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "save_profile":
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "Public page profile updated.")
+                return redirect("public_page_settings")
+            messages.error(request, "Could not save public page profile. Check the form.")
+        elif action == "add_listing":
+            if add_listing_form.is_valid():
+                mls_id = add_listing_form.cleaned_data["mls_id"].strip()
+                is_featured = add_listing_form.cleaned_data["is_featured"]
+                created_or_updated = "updated"
+                with transaction.atomic():
+                    card, created = PublicListingCard.objects.update_or_create(
+                        profile=profile,
+                        mls_id=mls_id,
+                        defaults={
+                            "is_featured": is_featured,
+                            "is_active": True,
+                        },
+                    )
+                    if created:
+                        created_or_updated = "created"
+
+                    try:
+                        from integrations.models import IntegrationConnection
+                        from integrations.services.listings import get_listing_provider
+
+                        connection = (
+                            IntegrationConnection.objects.for_org(org)
+                            .filter(
+                                integration_type__in=[
+                                    IntegrationConnection.IntegrationType.MLS,
+                                    IntegrationConnection.IntegrationType.ZILLOW,
+                                ],
+                                is_active=True,
+                                status=IntegrationConnection.Status.CONNECTED,
+                            )
+                            .order_by("integration_type", "provider", "id")
+                            .first()
+                        )
+                        if connection:
+                            record = get_listing_provider(connection).fetch_by_mls(mls_id)
+                            if record:
+                                status, is_active = _resolve_listing_status(record.status)
+                                if record.mlg_can_view is False:
+                                    status = PublicListingCard.ListingStatus.OFF_MARKET
+                                    is_active = False
+                                    messages.warning(
+                                        request,
+                                        f'Listing "{mls_id}" is not displayable (MlgCanView=false). Card was archived.',
+                                    )
+                                if record.mlg_can_use and "IDX" not in set(record.mlg_can_use):
+                                    status = PublicListingCard.ListingStatus.OFF_MARKET
+                                    is_active = False
+                                    messages.warning(
+                                        request,
+                                        f'Listing "{mls_id}" is not IDX-eligible for public display. Card was archived.',
+                                    )
+                                card.status = status
+                                card.is_active = is_active
+                                card.title = card.title or f"MLS {record.mls_number}"
+                                card.address = record.address or card.address
+                                card.city = record.city or card.city
+                                card.state = record.state or card.state
+                                card.postal_code = record.postal_code or card.postal_code
+                                card.price = record.price if record.price is not None else card.price
+                                urls = record.photo_urls or []
+                                if urls and not card.photo_url:
+                                    card.photo_url = urls[0]
+                                card.last_synced_at = timezone.now()
+                                card.save()
+                    except Exception:
+                        pass
+
+                messages.success(request, f'Listing card for MLS "{mls_id}" {created_or_updated}.')
+                return redirect("public_page_settings")
+            messages.error(request, "Could not add listing card. Please provide a valid MLS ID.")
+        elif action == "archive_listing":
+            card_id = request.POST.get("card_id")
+            card = PublicListingCard.objects.filter(profile=profile, pk=card_id).first()
+            if card:
+                card.is_active = False
+                card.status = PublicListingCard.ListingStatus.CLOSED
+                card.closed_at = timezone.now()
+                card.save(update_fields=["is_active", "status", "closed_at", "updated_at"])
+                messages.success(request, f'Listing "{card.mls_id}" archived.')
+            return redirect("public_page_settings")
+        elif action == "save_listing_card":
+            card_id = request.POST.get("card_id")
+            card = PublicListingCard.objects.filter(profile=profile, pk=card_id).first()
+            if not card:
+                messages.error(request, "Listing card not found.")
+                return redirect("public_page_settings")
+
+            card_form = PublicListingCardForm(
+                request.POST,
+                instance=card,
+                prefix="card",
+            )
+            if card_form.is_valid():
+                updated_card = card_form.save(commit=False)
+                if not updated_card.is_active and not updated_card.closed_at:
+                    updated_card.closed_at = timezone.now()
+                if updated_card.is_active:
+                    updated_card.closed_at = None
+                updated_card.save()
+                messages.success(request, f'Listing "{updated_card.mls_id}" updated manually.')
+                return redirect(f"{reverse('public_page_settings')}?edit_card={updated_card.pk}")
+            messages.error(request, "Could not save listing fallback details. Please correct the form.")
+            selected_card = card
+
+    cards = profile.listing_cards.order_by("-is_featured", "-updated_at")
+    public_url = request.build_absolute_uri(reverse_lazy("public_agent_page", kwargs={"slug": profile.slug}))
+    preview_url = f"{public_url}?preview=1"
+
+    return render(
+        request,
+        "settings/public_page.html",
+        {
+            "membership": membership,
+            "active_section": "public_page",
+            "profile": profile,
+            "profile_form": profile_form,
+            "add_listing_form": add_listing_form,
+            "cards": cards,
+            "public_url": public_url,
+            "preview_url": preview_url,
+            "selected_card": selected_card,
+            "card_form": card_form,
+        },
+    )
+
+
+def public_agent_page(request, slug):
+    from contacts.models import Contact, ContactNote
+    from tasks.models import Task
+
+    profile = None
+    is_preview = False
+    preview_requested = request.GET.get("preview") == "1"
+
+    base_qs = AgentPublicProfile.objects.select_related("user", "organization").filter(slug=slug)
+    if preview_requested:
+        candidate = base_qs.first()
+        if candidate:
+            membership = get_active_membership(request, organization=candidate.organization_id)
+            can_preview = bool(
+                membership
+                and (
+                    request.user.is_authenticated
+                    and (
+                        request.user.pk == candidate.user_id
+                        or membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN}
+                    )
+                )
+            )
+            if can_preview:
+                profile = candidate
+                is_preview = not candidate.is_published
+    else:
+        profile = base_qs.filter(is_published=True).first()
+        if not profile:
+            candidate = base_qs.first()
+            if candidate and request.user.is_authenticated:
+                membership = get_active_membership(request, organization=candidate.organization_id)
+                can_preview = bool(
+                    membership
+                    and (
+                        request.user.pk == candidate.user_id
+                        or membership.role in {Membership.Role.OWNER, Membership.Role.ADMIN}
+                    )
+                )
+                if can_preview:
+                    profile = candidate
+                    is_preview = not candidate.is_published
+
+    if not profile:
+        from django.http import Http404
+        raise Http404("Public agent page not found.")
+
+    cards = profile.listing_cards.filter(is_active=True).order_by("-is_featured", "-updated_at")
+    listing_choices = [(card.mls_id, card.address or card.title or f"MLS {card.mls_id}") for card in cards]
+
+    inquiry_form = PublicAgentInquiryForm(
+        request.POST or None,
+        listing_choices=listing_choices,
+    )
+    inquiry_submitted = request.GET.get("sent") == "1"
+
+    if request.method == "POST" and inquiry_form.is_valid():
+        full_name = inquiry_form.cleaned_data["full_name"]
+        first_name, last_name = _split_full_name(full_name)
+        email = (inquiry_form.cleaned_data.get("email") or "").strip().lower()
+        phone = (inquiry_form.cleaned_data.get("phone") or "").strip()
+        selected_mls_id = (inquiry_form.cleaned_data.get("target_mls_id") or "").strip()
+        message = inquiry_form.cleaned_data["message"].strip()
+
+        org = profile.organization
+        contact = None
+        if email:
+            contact = Contact.objects.for_org(org).filter(primary_email__iexact=email, is_active=True).first()
+        if not contact and phone:
+            contact = Contact.objects.for_org(org).filter(primary_phone=phone, is_active=True).first()
+
+        if contact:
+            changed_fields = []
+            if email and not contact.primary_email:
+                contact.primary_email = email
+                changed_fields.append("primary_email")
+            if phone and not contact.primary_phone:
+                contact.primary_phone = phone
+                changed_fields.append("primary_phone")
+            if changed_fields:
+                contact.save(update_fields=[*changed_fields, "updated_at"])
+        else:
+            contact = Contact.objects.create(
+                organization=org,
+                first_name=first_name,
+                last_name=last_name,
+                primary_email=email,
+                primary_phone=phone,
+                contact_type=Contact.ContactType.LEAD,
+                source=Contact.Source.WEBSITE,
+                assigned_to=profile.user,
+                is_active=True,
+            )
+
+        listing_label = f"Listing MLS {selected_mls_id}" if selected_mls_id else "General inquiry"
+        note_body = f"{listing_label}\n\n{message}"
+        ContactNote.objects.create(
+            organization=org,
+            contact=contact,
+            author=None,
+            note_type=ContactNote.NoteType.SYSTEM,
+            body=note_body,
+        )
+
+        Task.objects.create(
+            organization=org,
+            title=f"Respond to website inquiry from {contact.display_name}",
+            task_type=Task.TaskType.FOLLOW_UP,
+            priority=Task.Priority.HIGH,
+            status=Task.Status.PENDING,
+            description=note_body,
+            assigned_to=profile.user,
+            assigned_by=profile.user,
+            contact=contact,
+            due_date=timezone.localdate(),
+        )
+        return redirect(f"{reverse('public_agent_page', kwargs={'slug': profile.slug})}?sent=1")
+
+    initial_listing_id = request.GET.get("mls", "").strip()
+    if request.method == "GET" and initial_listing_id:
+        inquiry_form.fields["target_mls_id"].initial = initial_listing_id
+
+    return render(
+        request,
+        "public/agent_page.html",
+        {
+            "profile": profile,
+            "cards": cards,
+            "inquiry_form": inquiry_form,
+            "inquiry_submitted": inquiry_submitted,
+            "is_preview": is_preview,
+        },
+    )

@@ -70,11 +70,13 @@
           {% include "contacts/_form_field.html" with field=form.primary_email col="col-md-6" %}
           {% include "contacts/_form_field.html" with field=form.primary_phone col="col-md-6" %}
           {% include "contacts/_form_field.html" with field=form.address col="col-12" %}
-          {% include "contacts/_form_field.html" with field=form.city col="col-md-4" %}
-          {% include "contacts/_form_field.html" with field=form.state col="col-md-4" %}
-          {% include "contacts/_form_field.html" with field=form.zip_code col="col-md-4" %}
-          {% include "contacts/_form_field.html" with field=form.preferred_contact_method col="col-md-6" %}
-          {% include "contacts/_form_field.html" with field=form.timezone col="col-md-6" %}
+          {% include "contacts/_form_field.html" with field=form.city col="col-md-3" %}
+          {% include "contacts/_form_field.html" with field=form.state col="col-md-3" %}
+          {% include "contacts/_form_field.html" with field=form.zip_code col="col-md-3" %}
+          {% include "contacts/_form_field.html" with field=form.country col="col-md-3" %}
+          {% include "contacts/_form_field.html" with field=form.preferred_contact_method col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.language_preference col="col-md-4" %}
+          {% include "contacts/_form_field.html" with field=form.timezone col="col-md-4" %}
         </div>
       </div>
     </div>

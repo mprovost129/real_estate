@@ -11,12 +11,13 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from compliance.audit import log_audit_event
 from organizations.models import Membership
 from organizations.permissions import OrgRoleRequiredMixin, require_org_role
+from organizations.utils import get_active_membership
 from .forms import OpenHouseForm, VisitorSignInForm
 from .models import OpenHouse, OpenHouseVisitor
 
 
 def _get_org(request):
-    m = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    m = get_active_membership(request)
     return m.organization if m else None
 
 
@@ -66,7 +67,7 @@ def _ensure_lead_pipeline_deal(contact, assigned_user):
 class OrgMixin(LoginRequiredMixin):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        m = request.user.memberships.filter(is_active=True).select_related("organization").first()
+        m = get_active_membership(request)
         self.org = m.organization if m else None
 
     def get_context_data(self, **kwargs):

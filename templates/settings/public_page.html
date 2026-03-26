@@ -1,0 +1,240 @@
+{% extends "settings/base_settings.html" %}
+
+{% block title %}Public Agent Page{% endblock %}
+
+{% block settings_content %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="card-title">Public Agent Page</span>
+    <a href="{% if profile.is_published %}{{ public_url }}{% else %}{{ preview_url }}{% endif %}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+      <i class="bi bi-box-arrow-up-right me-1"></i> {% if profile.is_published %}View Public Page{% else %}Preview Public Page{% endif %}
+    </a>
+  </div>
+  <div class="card-body" style="padding:1rem 1.25rem;">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_profile">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Published</label>
+          {{ profile_form.is_published }}
+        </div>
+        <div class="col-md-9">
+          <label class="form-label">Page Title</label>
+          {{ profile_form.page_title }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Agent Name</label>
+          {{ profile_form.agent_display_name }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Agent Headline</label>
+          {{ profile_form.agent_headline }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Agent Bio</label>
+          {{ profile_form.agent_bio }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Agent Photo</label>
+          {{ profile_form.agent_photo }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Broker Logo</label>
+          {{ profile_form.broker_logo }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Broker Name</label>
+          {{ profile_form.broker_name }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Contact Email</label>
+          {{ profile_form.contact_email }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Contact Phone</label>
+          {{ profile_form.contact_phone }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Office Address</label>
+          {{ profile_form.office_address }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Website URL</label>
+          {{ profile_form.website_url }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Instagram</label>
+          {{ profile_form.instagram_url }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Facebook</label>
+          {{ profile_form.facebook_url }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">LinkedIn</label>
+          {{ profile_form.linkedin_url }}
+        </div>
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary btn-sm">Save Public Page Profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Listing Cards</span>
+  </div>
+  <div class="card-body" style="padding:1rem 1.25rem;">
+    <p style="margin:0 0 .75rem;color:var(--text-muted);font-size:.8125rem;">
+      Fallback mode: if MLS lookup does not hydrate details, use <strong>Edit Fallback</strong> to manually enter listing info.
+    </p>
+    <form method="post" class="row g-3 align-items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_listing">
+      <div class="col-md-6">
+        <label class="form-label">MLS ID</label>
+        {{ add_listing_form.mls_id }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Featured</label>
+        <div>{{ add_listing_form.is_featured }}</div>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Add By MLS ID</button>
+      </div>
+    </form>
+
+    <div class="mt-3">
+      {% if cards %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>MLS</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Price</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for card in cards %}
+                <tr>
+                  <td>{{ card.mls_id }}</td>
+                  <td>{{ card.address|default:card.title|default:"-" }}</td>
+                  <td>{{ card.get_status_display }}</td>
+                  <td>{% if card.price %}${{ card.price|floatformat:0 }}{% else %}-{% endif %}</td>
+                  <td>{{ card.updated_at|date:"Y-m-d H:i" }}</td>
+                  <td>
+                    {% if card.is_active %}
+                      <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="archive_listing">
+                        <input type="hidden" name="card_id" value="{{ card.pk }}">
+                        <button class="btn btn-outline-secondary btn-sm" type="submit">Close Out</button>
+                      </form>
+                    {% endif %}
+                    <a href="?edit_card={{ card.pk }}" class="btn btn-ghost btn-sm">Edit Fallback</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p style="margin:0;color:var(--text-muted);font-size:.875rem;">No listing cards yet.</p>
+      {% endif %}
+    </div>
+
+    {% if selected_card and card_form %}
+      <div class="mt-3" id="manual-editor" style="border-top:1px solid var(--border-muted);padding-top:1rem;">
+        <h6 style="margin:0 0 .75rem;">Manual Listing Details for MLS {{ selected_card.mls_id }}</h6>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_listing_card">
+          <input type="hidden" name="card_id" value="{{ selected_card.pk }}">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">MLS ID</label>
+              {{ card_form.mls_id }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status</label>
+              {{ card_form.status }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Active</label>
+              <div>{{ card_form.is_active }}</div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Featured</label>
+              <div>{{ card_form.is_featured }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Title</label>
+              {{ card_form.title }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Address</label>
+              {{ card_form.address }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City</label>
+              {{ card_form.city }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">State</label>
+              {{ card_form.state }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Postal Code</label>
+              {{ card_form.postal_code }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Price</label>
+              {{ card_form.price }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Beds</label>
+              {{ card_form.beds }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Baths</label>
+              {{ card_form.baths }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Sqft</label>
+              {{ card_form.sqft }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Photo URL</label>
+              {{ card_form.photo_url }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Details URL</label>
+              {{ card_form.details_url }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Short Description</label>
+              {{ card_form.short_description }}
+            </div>
+          </div>
+          {% if card_form.non_field_errors %}
+            <div style="margin-top:.5rem;color:var(--red-600,#dc2626);font-size:.8125rem;">
+              {{ card_form.non_field_errors|join:", " }}
+            </div>
+          {% endif %}
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary btn-sm">Save Fallback Details</button>
+            <a href="{% url 'public_page_settings' %}" class="btn btn-ghost btn-sm">Done</a>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.db.models import Q
+from django.http import Http404
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -14,6 +15,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from compliance.audit import log_audit_event
 from organizations.models import Membership
 from organizations.permissions import OrgRoleRequiredMixin, require_org_role
+from organizations.utils import get_active_membership
 from .forms import (
     ContactDocumentForm,
     ContactForm,
@@ -29,12 +31,7 @@ from .sms import SMSDeliveryError, send_sms_message
 
 
 def _get_org(request):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     return membership.organization if membership else None
 
 
@@ -84,12 +81,7 @@ class OrgMixin(LoginRequiredMixin):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        membership = (
-            request.user.memberships
-            .filter(is_active=True)
-            .select_related("organization")
-            .first()
-        )
+        membership = get_active_membership(request)
         self.org = membership.organization if membership else None
         self.membership = membership
 
@@ -157,6 +149,13 @@ class ContactDetailView(OrgMixin, DetailView):
 
     def get_queryset(self):
         return Contact.objects.for_org(self.org).filter(is_active=True)
+
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except Http404:
+            messages.error(request, "That contact was not found in your current workspace.")
+            return redirect("contacts:list")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -241,6 +240,7 @@ class ContactCreateView(OrgRoleRequiredMixin, OrgMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.organization = self.org
+        form.instance.is_active = True
         response = super().form_valid(form)
         messages.success(self.request, f'Contact "{self.object.full_name}" was saved.')
         return response
@@ -291,12 +291,7 @@ class ContactUpdateView(OrgRoleRequiredMixin, OrgMixin, UpdateView):
 @login_required
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def contact_add_note(request, pk):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
     contact = get_object_or_404(Contact, pk=pk, organization=org, is_active=True)
 
@@ -316,12 +311,7 @@ def contact_add_note(request, pk):
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def log_communication(request, pk):
     """Unified handler for call/email/text/note log forms."""
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org     = membership.organization if membership else None
     contact = get_object_or_404(Contact, pk=pk, organization=org, is_active=True)
 
@@ -453,12 +443,7 @@ def log_communication(request, pk):
 @login_required
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def contact_delete(request, pk):
-    membership = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
     contact = get_object_or_404(Contact, pk=pk, organization=org)
 
@@ -492,7 +477,7 @@ def follow_up_center(request):
     from django.utils import timezone
     from tasks.models import Task
 
-    membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    membership = get_active_membership(request)
     org   = membership.organization if membership else None
     today = timezone.localdate()
     now   = timezone.now()
@@ -614,7 +599,7 @@ def generate_reminders(request):
     if request.method != "POST":
         return redirect("contacts:follow_up")
 
-    membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    membership = get_active_membership(request)
     org   = membership.organization if membership else None
     today = timezone.localdate()
     window_md = {(d.month, d.day) for d in [today + timedelta(days=i) for i in range(31)]}
@@ -684,7 +669,7 @@ def generate_reminders(request):
 
 @login_required
 def contact_export(request):
-    membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
 
     qs = Contact.objects.for_org(org).filter(is_active=True).select_related("assigned_to").order_by("last_name", "first_name")
@@ -769,7 +754,7 @@ _SOURCE_MAP.update({k.lower(): k for k, v in Contact.Source.choices})
 @login_required
 @require_org_role(Membership.Role.MEMBER, org_resolver=lambda request, *args, **kwargs: _get_org(request))
 def contact_import(request):
-    membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    membership = get_active_membership(request)
     org = membership.organization if membership else None
 
     step = request.POST.get("step", "upload")
@@ -936,7 +921,7 @@ def contact_quick_task(request, pk):
     from tasks.models import Task
     from django.utils import timezone
 
-    membership = request.user.memberships.filter(is_active=True).select_related("organization").first()
+    membership = get_active_membership(request)
     org     = membership.organization if membership else None
     contact = get_object_or_404(Contact, pk=pk, organization=org, is_active=True)
 

@@ -4,6 +4,9 @@
 {% block page_title %}Message Templates{% endblock %}
 
 {% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-megaphone"></i> Broadcasts
+  </a>
   <a href="{% url 'message_templates:campaign_list' %}" class="btn btn-ghost btn-sm">
     <i class="bi bi-broadcast"></i> Campaigns
   </a>

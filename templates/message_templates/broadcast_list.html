@@ -1,0 +1,50 @@
+{% extends "base_app.html" %}
+
+{% block title %}One-Time Broadcasts{% endblock %}
+{% block page_title %}One-Time Broadcasts{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'message_templates:broadcast_analytics' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-bar-chart"></i> Analytics
+  </a>
+  <a href="{% url 'message_templates:campaign_list' %}" class="btn btn-ghost btn-sm">
+    <i class="bi bi-diagram-3"></i> Drip Campaigns
+  </a>
+  <a href="{% url 'message_templates:broadcast_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-send-plus"></i> New Broadcast
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body" style="padding:.25rem 1.25rem;">
+    {% if broadcasts %}
+      {% for b in broadcasts %}
+        <div style="padding:.75rem 0;border-bottom:1px solid var(--border-muted);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+          <div>
+            <a href="{% url 'message_templates:broadcast_detail' b.pk %}" style="font-weight:600;color:var(--text-primary);text-decoration:none;">
+              {{ b.name }}
+            </a>
+            <div style="font-size:.8125rem;color:var(--text-muted);">
+              {{ b.get_channel_display }} &middot; {{ b.template.name }} &middot; {{ b.get_status_display }} &middot; {{ b.get_approval_status_display }}
+            </div>
+            <div style="font-size:.75rem;color:var(--text-muted);">
+              Recipients: {{ b.recipient_count }} &middot; Sent: {{ b.sent_count }} &middot; Failed: {{ b.failed_count }} &middot; Skipped: {{ b.skipped_count }}
+            </div>
+            {% if b.scheduled_for %}
+              <div style="font-size:.75rem;color:var(--text-muted);">Scheduled: {{ b.scheduled_for|date:"Y-m-d H:i" }}</div>
+            {% endif %}
+          </div>
+          <div style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;">
+            {{ b.created_at|date:"Y-m-d H:i" }}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding:1.25rem 0;text-align:center;color:var(--text-muted);">
+        No broadcasts yet.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

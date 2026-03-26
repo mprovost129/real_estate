@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+from urllib.parse import quote
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Iterable
@@ -20,6 +21,8 @@ class ListingRecord:
     status: str = ""
     price: float | None = None
     photo_urls: list[str] | None = None
+    mlg_can_view: bool | None = None
+    mlg_can_use: list[str] | None = None
 
 
 class BaseListingProvider:
@@ -46,9 +49,40 @@ class MlsIdxProvider(BaseListingProvider):
             "MLS_IDX_LOOKUP_URL_TEMPLATE",
             "",
         )
-        if not template:
+        if template:
+            return template.format(mls=mls_number)
+
+        # MLS Grid OData fallback
+        base = config.get("mls_grid_base_url", "https://api.mlsgrid.com/v2/Property").rstrip("?")
+        origin = (config.get("originating_system_name") or "").strip()
+        if not origin:
             return ""
-        return template.format(mls=mls_number)
+
+        filter_parts = [
+            f"OriginatingSystemName eq '{origin}'",
+            f"(ListingId eq '{mls_number}' or ListingKey eq '{mls_number}')",
+        ]
+        if mls_number.isdigit():
+            filter_parts[1] = (
+                f"(ListingId eq '{mls_number}' or ListingKey eq '{mls_number}' "
+                f"or ListingIdNumeric eq {mls_number} or ListingKeyNumeric eq {mls_number})"
+            )
+        filter_expr = " and ".join(filter_parts)
+        expand = config.get("expand_resources", "Media")
+        params = [
+            ("$filter", filter_expr),
+            ("$top", "1"),
+        ]
+        if expand:
+            params.append(("$expand", expand))
+        safe_chars = ",()'"
+        query = "&".join(
+            [
+                f"{k}={quote(str(v), safe=safe_chars)}"
+                for k, v in params
+            ]
+        ).replace(" ", "%20")
+        return f"{base}?{query}"
 
     def _auth_headers(self):
         config = self.connection.config or {}
@@ -62,7 +96,9 @@ class MlsIdxProvider(BaseListingProvider):
         return headers
 
     def _fetch_json(self, url: str):
-        req = Request(url, headers=self._auth_headers(), method="GET")
+        headers = {"Accept-Encoding": "gzip"}
+        headers.update(self._auth_headers())
+        req = Request(url, headers=headers, method="GET")
         try:
             with urlopen(req, timeout=20) as resp:
                 body = resp.read().decode("utf-8")
@@ -81,19 +117,57 @@ class MlsIdxProvider(BaseListingProvider):
         return default
 
     def _normalize_record(self, raw: dict, fallback_mls: str):
+        media = raw.get("Media") or raw.get("media") or []
         photos = raw.get("photo_urls") or raw.get("photos") or []
+        if isinstance(media, list):
+            for item in media:
+                if not isinstance(item, dict):
+                    continue
+                media_url = (
+                    item.get("MediaURL")
+                    or item.get("media_url")
+                    or item.get("Uri800")
+                    or item.get("Uri640")
+                    or item.get("url")
+                )
+                if media_url:
+                    photos.append(str(media_url))
         if isinstance(photos, str):
             photos = [photos]
+        photos = [str(p) for p in photos if p]
+
+        can_use = raw.get("MlgCanUse")
+        if isinstance(can_use, str):
+            can_use = [can_use]
+        if not isinstance(can_use, list):
+            can_use = None
+
+        can_view = raw.get("MlgCanView")
+        if not isinstance(can_view, bool):
+            can_view = None
         return ListingRecord(
-            listing_id=str(self._pick(raw, "listing_id", "id", "ListingId", default=fallback_mls)),
-            mls_number=str(self._pick(raw, "mls_number", "MLSNumber", "mls", default=fallback_mls)),
-            address=str(self._pick(raw, "address", "street", "StreetAddress", default="")),
+            listing_id=str(
+                self._pick(
+                    raw,
+                    "listing_id",
+                    "id",
+                    "ListingId",
+                    "ListingKey",
+                    "ListingIdNumeric",
+                    "ListingKeyNumeric",
+                    default=fallback_mls,
+                )
+            ),
+            mls_number=str(self._pick(raw, "mls_number", "MLSNumber", "mls", "ListingId", default=fallback_mls)),
+            address=str(self._pick(raw, "address", "street", "StreetAddress", "UnparsedAddress", default="")),
             city=str(self._pick(raw, "city", "City", default="")),
-            state=str(self._pick(raw, "state", "State", default="")),
-            postal_code=str(self._pick(raw, "postal_code", "zip", "ZipCode", default="")),
-            status=str(self._pick(raw, "status", "Status", default="")).lower(),
-            price=float(self._pick(raw, "price", "list_price", "ListPrice", default=0) or 0) or None,
-            photo_urls=[str(p) for p in photos if p],
+            state=str(self._pick(raw, "state", "StateOrProvince", "State", default="")),
+            postal_code=str(self._pick(raw, "postal_code", "zip", "PostalCode", "ZipCode", default="")),
+            status=str(self._pick(raw, "status", "Status", "StandardStatus", "MlsStatus", default="")).lower(),
+            price=float(self._pick(raw, "price", "list_price", "ListPrice", "ClosePrice", default=0) or 0) or None,
+            photo_urls=photos,
+            mlg_can_view=can_view,
+            mlg_can_use=[str(v).upper() for v in can_use] if can_use else None,
         )
 
     def fetch_listing(self, listing_id: str) -> ListingRecord | None:
@@ -114,12 +188,15 @@ class MlsIdxProvider(BaseListingProvider):
             )
 
         payload = self._fetch_json(url)
-        if isinstance(payload, list):
+        raw = payload
+        if isinstance(payload, dict) and isinstance(payload.get("value"), list):
+            if not payload["value"]:
+                return None
+            raw = payload["value"][0]
+        elif isinstance(payload, list):
             if not payload:
                 return None
             raw = payload[0]
-        else:
-            raw = payload
         if not isinstance(raw, dict):
             return None
         return self._normalize_record(raw, fallback_mls=mls_number)

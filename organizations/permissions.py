@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 from .models import Membership
+from .utils import get_active_membership as resolve_active_membership
 
 
 ROLE_RANK = {
@@ -69,10 +70,7 @@ CAPABILITY_LABELS = {
 
 
 def get_active_membership(request, organization=None):
-    qs = request.user.memberships.filter(is_active=True).select_related("organization")
-    if organization is not None:
-        qs = qs.filter(organization=organization)
-    return qs.first()
+    return resolve_active_membership(request, organization=organization)
 
 
 def has_min_role(membership, min_role):

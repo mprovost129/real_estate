@@ -7,24 +7,15 @@ from django.utils import timezone
 
 from compliance.models import AuditEvent
 from organizations.models import Membership
+from organizations.utils import get_active_membership
 
 def _get_org(request):
-    m = (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    m = get_active_membership(request)
     return m.organization if m else None
 
 
 def _get_membership(request):
-    return (
-        request.user.memberships
-        .filter(is_active=True)
-        .select_related("organization")
-        .first()
-    )
+    return get_active_membership(request)
 
 
 # ------------------------------------------------------------------ #

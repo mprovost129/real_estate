@@ -25,6 +25,13 @@ class ContactForm(forms.ModelForm):
                 memberships__organization=org,
                 memberships__is_active=True,
             ).distinct()
+        # Keep country non-blocking and default to US when omitted.
+        if "country" in self.fields:
+            self.fields["country"].required = False
+            self.fields["country"].initial = self.initial.get("country") or "US"
+        if "language_preference" in self.fields:
+            self.fields["language_preference"].required = False
+            self.fields["language_preference"].initial = self.initial.get("language_preference") or "en"
         # Add Bootstrap/theme classes to all inputs
         for name, field in self.fields.items():
             if isinstance(field.widget, (forms.TextInput, forms.EmailInput,
@@ -38,9 +45,17 @@ class ContactForm(forms.ModelForm):
             if isinstance(field.widget, forms.DateInput):
                 field.widget.attrs["type"] = "date"
 
+    def clean_country(self):
+        country = (self.cleaned_data.get("country") or "").strip()
+        return country or "US"
+
+    def clean_language_preference(self):
+        language = (self.cleaned_data.get("language_preference") or "").strip()
+        return language or "en"
+
     class Meta:
         model = Contact
-        exclude = ["organization", "created_at", "updated_at"]
+        exclude = ["organization", "created_at", "updated_at", "is_active"]
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
             "must_haves": forms.Textarea(attrs={"rows": 2}),
